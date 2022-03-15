@@ -17,8 +17,9 @@ from constant.paths import PATH_TO_INPUT_JPG, \
                   PATH_TO_OUTPUT_JPG
 lg.info("Start")
 
-file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\(190)-test17.png"
+#file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\(190)-test17.png"
 #file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\input.jpg"
+file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\Screenshot.png"
 img:ndarray     = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
 img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + file)
 
@@ -26,8 +27,10 @@ lg.info(f"load image '{file}'")
 lg.debug(f"resolution '{file}' is {img.shape}")
 completeFull:list[list[Island]] = []
 
-step_x = img.shape[1] // 5
-step_y = img.shape[0] // 4
+#step_x = img.shape[1] // 5
+#step_y = img.shape[0] // 4
+step_x = img.shape[1] // 1
+step_y = img.shape[0] // 1
 
 def fragment_calculate(coord_x:int, coord_y:int,
   step_x:int, step_y:int, mask_inv:np.ndarray) -> list[Island]:
@@ -66,32 +69,45 @@ for x in range(img.shape[1] // step_x):
         lg.info(f"{up_value}, {len(complete)}")
         continue
       else: 
-        step = 10
-        up_value
-        while len(complete) >= 12:
-          up_value = up_value - step
+        for single in complete:
+          if len(single) >= 2*step_x/3: #находим самый большлй остров
+            j=0
+            while j != len(complete):
+              if len(complete[j]) <= 3 or complete[j].maxH - complete[j].minH <= 2:
+                del complete[j]
+              else:
+                j+=1
+            step = 10
+            up_value
+            while len(complete) >= 12:
+              up_value = up_value - step
 
-          mask_inv = get_mask_from_gray(img, upper_val=up_value)
-          complete = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
+              mask_inv = get_mask_from_gray(img, upper_val=up_value)
+              complete = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
-          j=0
-          while j != len(complete):
-            if len(complete[j]) <= 3 or complete[j].maxH - complete[j].minH <= 2:
-              del complete[j]
-            else:
-              j+=1
-          
-        #------------------------------------------------------
-        isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
-        isl = draw_islands(complete, isl)
-        isl = cv2.rectangle(isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
-        lg.info(f"{up_value}, {len(complete)}")
-        completeFull.append(complete.copy())
-        cv2.imshow('w', isl)
-        cv2.imwrite(r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\output\\" + f"{up_value}_{len(complete)}.png", isl)
-        cv2.waitKey(200)
-        #------------------------------------------------------
-        break
+              j=0
+              while j != len(complete):
+                if len(complete[j]) <= 3 or complete[j].maxH - complete[j].minH <= 2:
+                  del complete[j]
+                else:
+                  j+=1
+          else:
+            step = 10
+            up_value
+            while len(complete) >= 12:
+              up_value = up_value + step
+
+            #------------------------------------------------------
+            isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
+            isl = draw_islands(complete, isl)
+            isl = cv2.rectangle(isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
+            lg.info(f"{up_value}, {len(complete)}")
+            completeFull.append(complete.copy())
+            cv2.imshow('w', isl)
+            cv2.imwrite(r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\output\\" + f"{up_value}_{len(complete)}.png", isl)
+            cv2.waitKey(200)
+            #------------------------------------------------------
+            break
           
       
 cv2.imwrite(PATH_TO_MASK_ + "_test.png", isl)

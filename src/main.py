@@ -24,15 +24,11 @@ lg.info(f"load image '{fileName}'")
 lg.debug(f"resolution '{fileName}' is {img.shape}")
 fragmentsWithIslands:list[list[list[Island]]] = []
 
-step_x = img.shape[1] // 1
-step_y = img.shape[0] // 2
-# step_y = 80
+step_x = img.shape[1] // 5
+step_y = img.shape[0] // 4
 lg.debug(f"step_x [{step_x}], step_y [{step_y}] ")
 
 mask_inv = get_mask_from_gray(img, upper_val=100)
-
-masks:list[np.ndarray] = []
-
 img_isl        :np.ndarray   = img_clr.copy()
 
 lg.info(f"start fragment building")

@@ -14,7 +14,7 @@ initLogger(lg.DEBUG)
 
 lg.info("Start")
 
-# fileName = "test5.png"
+# fileName = "test7.png"
 fileName = "input.jpg"
 
 img:ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
@@ -24,8 +24,8 @@ lg.info(f"load image '{fileName}'")
 lg.debug(f"resolution '{fileName}' is {img.shape}")
 fragmentsWithIslands:list[list[list[Island]]] = []
 
-step_x = img.shape[1] // 5
-step_y = img.shape[0] // 4
+step_x = img.shape[1] // 1
+step_y = img.shape[0] // 2
 # step_y = 80
 lg.debug(f"step_x [{step_x}], step_y [{step_y}] ")
 
@@ -51,9 +51,16 @@ cv2.imwrite(PATH_TO_OUTPUT_ + "islands1.png", img_isl)
 img_isl     :np.ndarray   = np.full_like(img_clr, 255)
 complete_isl:list[Island] = build_islands_from_fragmets(fragmentsWithIslands, step_x, step_y)
 
-img_isl = draw_islands(complete_isl, img_isl)
-cv2.imwrite(PATH_TO_OUTPUT_ + "islands.png", img_isl)
-# complete_isl.extend(sorted(rowsWithIslands[0], key=len))
+for isl in complete_isl:
+  isl.solidify()
 
-# del fragmentsWithIslands
+complete_isl = sorted(complete_isl, key=len)
+
+img_isl = draw_island(complete_isl[-1], img_isl)
+
+points = get_low_up(complete_isl[-1])
+for p in points:
+  img_isl[p[1], p[0]] = (0,0,0)
+cv2.imwrite(PATH_TO_OUTPUT_ + "islands.png", img_isl)
+
 lg.info("fin")

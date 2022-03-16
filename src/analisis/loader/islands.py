@@ -1,5 +1,5 @@
 from cmath import inf
-from analisis.classes.classes import Line, Island, line_np_type
+from analisis.classes.classes import Line, Island, dtype_line
 from analisis.loader.img_analizer import is_neighbours
 from logger import lg
 from pprint import pp
@@ -76,7 +76,7 @@ def islands_from_lines(graph:list[Line]) -> list[Island]:
 
     isl = Island()
 
-    l = np.empty(len(lines_complete), dtype=line_np_type)
+    l = np.empty(len(lines_complete), dtype=dtype_line)
     l['index']  = np.array([l.index for l in lines_complete ])
     l['top']    = np.array([l.top   for l in lines_complete ])
     l['down']   = np.array([l.down  for l in lines_complete ])

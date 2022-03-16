@@ -19,8 +19,8 @@ def draw_island(island:Island,
     for i in island:
         cv2.line(
             test_img, 
-            (i.index, i.top),
-            (i.index, i.down),
+            (i['index'], i['top']),
+            (i['index'], i['down']),
             clr
             )
     return cv2.resize(
@@ -44,8 +44,8 @@ def draw_islands(islands:list[Island], mask_inv:np.ndarray, backclr:int=(0,0,0),
         for i in island:
             test_img = cv2.line(
                 test_img, 
-                (i.index, i.top),
-                (i.index, i.down),
+                (i['index'], i['top']),
+                (i['index'], i['down']),
                 clr
                 )
     return cv2.resize(

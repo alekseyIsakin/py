@@ -1,4 +1,4 @@
-set py="C:\Users\Alex\AppData\Local\Programs\Python\Python39\python.exe" 
+set py="" 
 
 %py% --version
 

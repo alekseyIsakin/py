@@ -1,3 +1,4 @@
 import logging as lg
 
-lg.basicConfig(format='[%(asctime)s][%(filename)s][%(levelname)s] %(message)s', level=lg.INFO)
+def initLogger(lvl=lg.INFO):
+  lg.basicConfig(format='[%(asctime)s][%(filename)s][%(levelname)s] %(message)s', level=lvl)

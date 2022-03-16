@@ -1,51 +1,18 @@
+from cmath import inf
 import cv2
 import numpy as np
 import random as rnd
 
 from analisis.classes.classes import Line, Island
 
-def get_lines(mask_inv:np.ndarray, offset_x=0, offset_y=0) -> list[Line]:
-    graph = []
-
-    for j in range(mask_inv.shape[1]):
-        higher = 0
-        lower = 0
-
-        cntBlank = 0
-        lines = []
-
-        for i in range(mask_inv.shape[0]):
-            if mask_inv[i,j] == 255: 
-                cntBlank += 1
-                if lower == 0:
-                    continue
-            
-            if lower == 0: lower = i
-            if mask_inv[i,j] != 255: 
-                higher = i
-                cntBlank = 0
-            if cntBlank > 0:
-                lines.append(Line(j+offset_y, higher+offset_x, lower+offset_x))
-                lower = 0
-                higher = 0
-        if lower > 0:
-            lines.append(Line(j+offset_y, higher+offset_x, lower+offset_x))
-        for l in lines:
-            graph.append(l)
-        lines.clear()
-    
-    return graph
-
-
-
-def get_low_up(graph:list[Island], img=np.zeros(0)) -> list[int]:
+def get_low_up(graph:Island, img=np.zeros(0)) -> list[int]:
 
     prev = graph[0]
 
     prevPoint = 0
     mainPoints = []
-    mainPoints.append(graph[0].top)
-    prevPoint = graph[0].down
+    mainPoints.append((graph[0]['index'], graph[0]['top']))
+    prevPoint = graph[0]['down']
     status = False
     shape = len(img.shape)
     print("Я начну с точки ", mainPoints[0])
@@ -60,74 +27,74 @@ def get_low_up(graph:list[Island], img=np.zeros(0)) -> list[int]:
     for p in graph[1:]:
             
         if(status == False):
-            if(mainPoints[-1] < p.top):
-                if(prevPoint <= p.down):
+            if(mainPoints[-1][1] < p['top']):
+                if(prevPoint <= p['down']):
                     status = False
-                    mainPoints.append(p.top)
-                    prevPoint = p.down
+                    mainPoints.append((p['index'], p['top']))
+                    prevPoint = p['down']
                 else:
-                    if((p.top - mainPoints[-1]) > (p.down - prevPoint)):
+                    if((p['top'] - mainPoints[-1][1]) > (p['down'] - prevPoint)):
                         status = False
-                        mainPoints.append(p.top)
-                        prevPoint = p.down
-                    elif((p.top - mainPoints[-1]) < (p.down - prevPoint)):
+                        mainPoints.append((p['index'], p['top']))
+                        prevPoint = p['down']
+                    elif((p['top'] - mainPoints[-1][1]) < (p['down'] - prevPoint)):
                         status = True
-                        mainPoints.append(p.down)
-                        prevPoint = p.top
+                        mainPoints.append((p['index'], p['down']))
+                        prevPoint = p['top']
                     else:
                         status = False
-                        mainPoints.append(p.top)
-                        prevPoint = p.down
-            elif(mainPoints[-1] > p.top):
-                if(prevPoint >= p.down):
+                        mainPoints.append((p['index'], p['top']))
+                        prevPoint = p['down']
+            elif(mainPoints[-1][1] > p['top']):
+                if(prevPoint >= p['down']):
                     status = True
-                    mainPoints.append(p.down)
-                    prevPoint = p.top
+                    mainPoints.append((p['index'], p['down']))
+                    prevPoint = p['top']
                 else:
                     status = False
-                    mainPoints.append(p.top)
-                    prevPoint = p.down
+                    mainPoints.append((p['index'], p['top']))
+                    prevPoint = p['down']
             else:
-                if(prevPoint <= p.down):
+                if(prevPoint <= p['down']):
                     status = False
-                    mainPoints.append(p.top)
-                    prevPoint = p.down
+                    mainPoints.append((p['index'], p['top']))
+                    prevPoint = p['down']
                 else:
                     status = True
-                    mainPoints.append(p.down)
-                    prevPoint = p.top
+                    mainPoints.append((p['index'], p['down']))
+                    prevPoint = p['top']
         else:
-            if(mainPoints[-1] > p.down):
-                if(prevPoint >= p.top):
+            if(mainPoints[-1][1] > p['down']):
+                if(prevPoint >= p['top']):
                     status = True
-                    mainPoints.append(p.down)
-                    prevPoint = p.top
+                    mainPoints.append((p['index'], p['down']))
+                    prevPoint = p['top']
                 else:
-                    if((p.down - mainPoints[-1]) < (p.top - prevPoint)):
+                    if((p['down'] - mainPoints[-1][1]) < (p['top'] - prevPoint)):
                         status = True
-                        mainPoints.append(p.down)
-                        prevPoint = p.top
-                    elif((p.down - mainPoints[-1]) > (p.top - prevPoint)):
+                        mainPoints.append((p['index'], p['down']))
+                        prevPoint = p['top']
+                    elif((p['down'] - mainPoints[-1][1]) > (p['top'] - prevPoint)):
                         status = False
-                        mainPoints.append(p.top)
-                        prevPoint = p.down
+                        mainPoints.append((p['index'], p['top']))
+                        prevPoint = p['down']
                     else:
                         status = True
-                        mainPoints.append(p.down)
-                        prevPoint = p.top
-            elif(mainPoints[-1] < p.down):
+                        mainPoints.append((p['index'], p['down']))
+                        prevPoint = p['top']
+            elif(mainPoints[-1][1] < p['down']):
                 status = False
-                mainPoints.append(p.top)
-                prevPoint = p.down
+                mainPoints.append((p['index'], p['top']))
+                prevPoint = p['down']
             else:
-                if(p.top > prevPoint):
+                if(p['top'] > prevPoint):
                     status = False
-                    mainPoints.append(p.top)
-                    prevPoint = p.down
+                    mainPoints.append((p['index'], p['top']))
+                    prevPoint = p['down']
                 else:
                     status = True
-                    mainPoints.append(p.down)
-                    prevPoint = p.top
+                    mainPoints.append((p['index'], p['down']))
+                    prevPoint = p['top']
                     
         if shape > 1:
             if shape == 2:
@@ -150,9 +117,18 @@ def get_low_up(graph:list[Island], img=np.zeros(0)) -> list[int]:
 
     return mainPoints
   
-def is_neighbours(l=Line(0,0,0), r=Line(0,0,0)):
-  return not (not abs(l.index - r.index) > 1 and 
-         ((l.top <= (r.top+1) and l.top >= (r.down-1)) or
-          (l.down <= (r.top+1) and l.down >= (r.down-1)) or
-          (r.top <= (l.top+1) and r.top >= (l.down-1))  or
-          (r.down <= (l.top+1) and r.down >= (l.down-1))))
+def is_neighbours(left_line:Line, right_line:Line):
+    if left_line == right_line: return False
+    
+    # t1 = not abs(left_line['index'] - right_line['index']) > 1
+    # t2 = (left_line['down'] <= right_line['down']+1 and left_line['down'] >= (right_line['top']-1))
+    # t3 = (left_line['top'] <= (right_line['down']+1) and left_line['top'] >= (right_line['top']-1))
+    # t4 = (right_line['down'] <= (left_line['down']+1) and right_line['down'] >= (left_line['top']-1))
+    # t5 = (right_line['top'] <= (left_line['down']+1) and right_line['top'] >= (left_line['top']-1))
+    # t6 = (t1 and (t2 or t3 or t4 or t5))
+    # return t6
+    return (not abs(left_line['index'] - right_line['index']) > 1 and
+                ((left_line['down'] <= right_line['down']+1 and left_line['down'] >= (right_line['top']-1)) or
+                (left_line['top'] <= (right_line['down']+1) and left_line['top'] >= (right_line['top']-1)) or
+                (right_line['down'] <= (left_line['down']+1) and right_line['down'] >= (left_line['top']-1)) or
+                (right_line['top'] <= (left_line['down']+1) and right_line['top'] >= (left_line['top']-1))))

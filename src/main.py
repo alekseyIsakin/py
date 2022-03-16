@@ -3,49 +3,40 @@ from distutils.archive_util import make_archive
 from pprint import pprint as pp
 from copy import deepcopy
 from logger import lg
+import cProfile
+
+from logger import lg, initLogger
 
 from numpy import ndarray
 from analisis.loader.img_analizer import *
 from analisis.loader.mask_loader import *
-from analisis.loader.islands import islands_from_lines
+from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate
 from drawing.draw import *
 from drawing.show import *
-from constant.paths import PATH_TO_INPUT_JPG, \
-                  PATH_TO_INPUT_, \
-                  PATH_TO_ISLANDS_JPG,  \
-                  PATH_TO_MASK_JPG, \
-                  PATH_TO_MASK_, \
-                  PATH_TO_OUTPUT_JPG
+from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
+
+initLogger(lg.DEBUG)
+
 lg.info("Start")
 
-file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\(190)-test17.png"
-#file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\input.jpg"
-#file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\Screenshot.png"
-img:ndarray     = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
-img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + file)
+fileName = "(190)-test17.png"
+#fileName = "input.jpg"
 
-lg.info(f"load image '{file}'")
-lg.debug(f"resolution '{file}' is {img.shape}")
-completeFull:list[list[Island]] = []
+img:ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
+img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
+
+lg.info(f"load image '{fileName}'")
+lg.debug(f"resolution '{fileName}' is {img.shape}")
+fragmentsWithIslands:list[list[list[Island]]] = []
 
 step_x = img.shape[1] // 5
 step_y = img.shape[0] // 4
-#step_x = img.shape[1] // 1
-#step_y = img.shape[0] // 1
-
-def fragment_calculate(coord_x:int, coord_y:int,
-  step_x:int, step_y:int, mask_inv:np.ndarray) -> list[Island]:
-    lines_arr = get_lines(mask_inv [
-      coord_x:coord_x + step_x,
-      coord_y:coord_y + step_y], coord_x, coord_y)
-    complete = islands_from_lines(lines_arr)
-
-    return complete
+lg.debug(f"step_x [{step_x}], step_y [{step_y}] ")
 
 mask_inv = get_mask_from_gray(img, upper_val=100)
-mask = cv2.cvtColor(mask_inv, cv2.COLOR_GRAY2BGR) 
-isl = mask.copy()
-    
+img_isl        :np.ndarray   = img_clr.copy()
+
+lg.info(f"start fragment building")
 
 for x in range(img.shape[1] // step_x):
   for y in range(img.shape[0] // step_y):
@@ -56,28 +47,28 @@ for x in range(img.shape[1] // step_x):
       largest_island_has_been_found = False
       #lg.debug(f">> step [{x}|{y}][{x*step_x}, {y*step_y}]")
       mask_inv = get_mask_from_gray(img, upper_val=up_value)      
-      complete = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
+      islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
       i=0
-      while i != len(complete):
-        if len(complete[i]) <= 3 or complete[i].maxH - complete[i].minH <= 2:
-          del complete[i]
+      while i != len(islandsInFragment):
+        if len(islandsInFragment[i]) <= 3 or islandsInFragment[i].maxH - islandsInFragment[i].minH <= 2:
+          del islandsInFragment[i]
         else:
           i+=1
 
-      for single in complete:
+      for single in islandsInFragment:
         if len(single) >= step_x:
 
           largest_island_has_been_found = True
-          print(f"При насыщенности {up_value} островов найдено {len(complete)}")
+          print(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
           #------------------------------------------------------
           isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
-          isl = draw_islands(complete, isl)
+          isl = draw_islands(islandsInFragment, isl)
           isl = cv2.rectangle(isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
-          #lg.info(f"{up_value}, {len(complete)}")
-          completeFull.append(complete.copy())
+          #lg.info(f"{up_value}, {len(islandsInFragment)}")
+          fragmentsWithIslands.append(islandsInFragment.copy())
           cv2.imshow('w', isl)
-          cv2.imwrite(r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\output\\" + f"{up_value}_{len(complete)}.png", isl)
+          cv2.imwrite(r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\output\\" + f"{up_value}_{len(islandsInFragment)}.png", isl)
           cv2.waitKey(10)
           #------------------------------------------------------
           break
@@ -85,21 +76,21 @@ for x in range(img.shape[1] // step_x):
       if largest_island_has_been_found == True:
         break
 
-      complete.sort(key=len, reverse=True)
+      islandsInFragment.sort(key=len, reverse=True)
       i=0
-      #while i < len(complete):
-      #  if complete[i] 
+      #while i < len(islandsInFragment):
+      #  if islandsInFragment[i] 
       
-cv2.imwrite(PATH_TO_MASK_ + "_test.png", isl)
-cv2.imshow('w', isl)
-cv2.waitKey()
+cv2.imwrite(PATH_TO_OUTPUT_ + "islands1.png", img_isl)
 
-isl:np.ndarray = img_clr.copy()
-for i in completeFull:
-  isl = draw_islands(i, isl)
-  # cv2.imshow('w', isl)
-  # cv2.waitKey(200)
-cv2.imwrite(PATH_TO_ISLANDS_JPG, isl)
-  
+img_isl     :np.ndarray   = np.full_like(img_clr, 255)
+complete_isl:list[Island] = build_islands_from_fragmets(fragmentsWithIslands, step_x, step_y)
 
-exit()
+for isl in complete_isl:
+  isl.solidify()
+
+complete_isl = sorted(complete_isl, key=len)
+
+img_isl = draw_island(complete_isl[-1], img_isl)
+
+lg.info("fin")

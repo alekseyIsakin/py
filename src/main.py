@@ -1,3 +1,4 @@
+from audioop import reverse
 from distutils.archive_util import make_archive
 from pprint import pprint as pp
 from copy import deepcopy
@@ -17,9 +18,9 @@ from constant.paths import PATH_TO_INPUT_JPG, \
                   PATH_TO_OUTPUT_JPG
 lg.info("Start")
 
-#file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\(190)-test17.png"
+file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\(190)-test17.png"
 #file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\input.jpg"
-file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\Screenshot.png"
+#file = r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\input\Screenshot.png"
 img:ndarray     = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
 img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + file)
 
@@ -27,10 +28,10 @@ lg.info(f"load image '{file}'")
 lg.debug(f"resolution '{file}' is {img.shape}")
 completeFull:list[list[Island]] = []
 
-#step_x = img.shape[1] // 5
-#step_y = img.shape[0] // 4
-step_x = img.shape[1] // 1
-step_y = img.shape[0] // 1
+step_x = img.shape[1] // 5
+step_y = img.shape[0] // 4
+#step_x = img.shape[1] // 1
+#step_y = img.shape[0] // 1
 
 def fragment_calculate(coord_x:int, coord_y:int,
   step_x:int, step_y:int, mask_inv:np.ndarray) -> list[Island]:
@@ -48,15 +49,15 @@ isl = mask.copy()
 
 for x in range(img.shape[1] // step_x):
   for y in range(img.shape[0] // step_y):
-    bottom_line = 0
-    upper_line = 250
-    step = 100
+    bottom_line = 150
+    upper_line = 255
+    step = 1
     for up_value in range(bottom_line,upper_line,step):
-      lg.debug(f">> step [{x}|{y}][{x*step_x}, {y*step_y}]")
-      mask_inv = get_mask_from_gray(img, upper_val=up_value)
-      
+      largest_island_has_been_found = False
+      #lg.debug(f">> step [{x}|{y}][{x*step_x}, {y*step_y}]")
+      mask_inv = get_mask_from_gray(img, upper_val=up_value)      
       complete = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
-      # Для мусора
+
       i=0
       while i != len(complete):
         if len(complete[i]) <= 3 or complete[i].maxH - complete[i].minH <= 2:
@@ -64,51 +65,30 @@ for x in range(img.shape[1] // step_x):
         else:
           i+=1
 
+      for single in complete:
+        if len(single) >= step_x:
 
-      if len(complete) == 0: 
-        lg.info(f"{up_value}, {len(complete)}")
-        continue
-      else: 
-        for single in complete:
-          if len(single) >= 2*step_x/3: #находим самый большлй остров
-            j=0
-            while j != len(complete):
-              if len(complete[j]) <= 3 or complete[j].maxH - complete[j].minH <= 2:
-                del complete[j]
-              else:
-                j+=1
-            step = 10
-            up_value
-            while len(complete) >= 12:
-              up_value = up_value - step
+          largest_island_has_been_found = True
+          print(f"При насыщенности {up_value} островов найдено {len(complete)}")
+          #------------------------------------------------------
+          isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
+          isl = draw_islands(complete, isl)
+          isl = cv2.rectangle(isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
+          #lg.info(f"{up_value}, {len(complete)}")
+          completeFull.append(complete.copy())
+          cv2.imshow('w', isl)
+          cv2.imwrite(r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\output\\" + f"{up_value}_{len(complete)}.png", isl)
+          cv2.waitKey(10)
+          #------------------------------------------------------
+          break
 
-              mask_inv = get_mask_from_gray(img, upper_val=up_value)
-              complete = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
+      if largest_island_has_been_found == True:
+        break
 
-              j=0
-              while j != len(complete):
-                if len(complete[j]) <= 3 or complete[j].maxH - complete[j].minH <= 2:
-                  del complete[j]
-                else:
-                  j+=1
-          else:
-            step = 10
-            up_value
-            while len(complete) >= 12:
-              up_value = up_value + step
-
-            #------------------------------------------------------
-            isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
-            isl = draw_islands(complete, isl)
-            isl = cv2.rectangle(isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
-            lg.info(f"{up_value}, {len(complete)}")
-            completeFull.append(complete.copy())
-            cv2.imshow('w', isl)
-            cv2.imwrite(r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\output\\" + f"{up_value}_{len(complete)}.png", isl)
-            cv2.waitKey(200)
-            #------------------------------------------------------
-            break
-          
+      complete.sort(key=len, reverse=True)
+      i=0
+      #while i < len(complete):
+      #  if complete[i] 
       
 cv2.imwrite(PATH_TO_MASK_ + "_test.png", isl)
 cv2.imshow('w', isl)
@@ -123,40 +103,3 @@ cv2.imwrite(PATH_TO_ISLANDS_JPG, isl)
   
 
 exit()
-
-lines_arr = get_lines(mask_inv[:250,:250])
-lg.debug(f"find [{len(lines_arr)}] lines")
-
-complete = islands_from_lines(lines_arr)
-lg.info(f"find [{len(complete)}] islands")
-
-cv2.imwrite(PATH_TO_ISLANDS_JPG, draw_islands(complete, img_clr.copy(), draw_over=True))
-
-# t = get_low_up(get_lines(mask_inv), img)
-test_img = np.ones((img.shape[0],img.shape[1], 3)) * 255
-complete[0].smooth()
-test_isl:Island = deepcopy(complete[0])
-# test_isl.set_wide_x2()
-
-# pnt = get_low_up(test_isl, test_img)
-# # pnt = get_low_up(complete[0], test_img)
-test_img = draw_islands(complete, test_img)
-# sum_avg = 0
-# step = 4
-
-# for i in range(step):
-#   sum_avg += pnt[i]
-
-# test_img[step-1, int(sum_avg / step)] = (255,0,0)
-
-# t = len(pnt)
-# for i, j in enumerate(pnt[step:]):
-#   sum_avg = sum_avg - pnt[i] + pnt[i+step]
-#   test_img[int(sum_avg/step), complete[0][0].index + i + step] = (255,0,0)
-
-cv2.imwrite(PATH_TO_MASK_JPG, img)
-cv2.imwrite(PATH_TO_MASK_ + "_test.png", test_img)
-lg.info("complete")
-
-# cv2.imwrite(PATH_TO_OUTPUT_JPG,img)
-# cv2.imwrite(r'../images/output/output.png',blank3)

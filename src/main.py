@@ -2,12 +2,14 @@ from audioop import reverse
 from distutils.archive_util import make_archive
 from pprint import pprint as pp
 from copy import deepcopy
+from re import X
+from turtle import left
 from logger import lg
 import cProfile
 
 from logger import lg, initLogger
 
-from numpy import ndarray
+from numpy import diff, ndarray
 from analisis.loader.img_analizer import *
 from analisis.loader.mask_loader import *
 from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate
@@ -19,9 +21,69 @@ initLogger(lg.DEBUG)
 
 lg.info("Start")
 
+def middle_fragment(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
+
+  wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
+  success = False
+  dir_come_from = wall_dir['scum']
+  dir_come_to = wall_dir['scum']
+
+  if len(islands) == 0:
+    return success
+
+  islands.sort(key=lambda x: (x.right - x.left), reverse=True)
+  if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
+    success = True
+    return success
+
+  islands.sort(key=lambda x: x.left)
+
+  for single in islands:
+    ultraleft_lines = single.get_lines_at_index(single.left)
+    if single.left == x*step_x:
+      dir_come_from = wall_dir['left']              # if island come from left border
+    else:
+      for left_line in ultraleft_lines:
+        if left_line['top'] == y*step_y:               # if island come from top border
+          dir_come_from = wall_dir['top']
+          break
+        elif left_line['down'] == (y+1)*step_y:    # if island come from down border
+          dir_come_from = wall_dir['down']
+          break
+        else:                                       # if island - scum GAGAGA
+          dir_come_from = wall_dir['scum']
+
+    if dir_come_from == wall_dir['scum'] or (dir_come_from != dir_come_to and dir_come_to != wall_dir['scum']):
+      success = False
+      continue
+
+    if single.right >= (x+1)*step_x-1:
+      dir_come_to = wall_dir['right']
+      success = True
+      return success
+    else:
+      ultraright_lines = single.get_lines_at_index(single.right)
+      for right_line in ultraright_lines:
+        if right_line['top'] == y*step_y:
+          dir_come_to = wall_dir['top']
+          break
+        elif right_line['down'] == (y+1)*step_y:
+          dir_come_to = wall_dir['down']
+          break
+        else:                                       
+            dir_come_to = wall_dir['scum']
+
+    if dir_come_to == wall_dir['scum']:
+      dir_come_from = wall_dir['scum']
+    else:
+      success = True
+
+  return success        
+ 
+  
+
+fileName = "nameless.png"
 #fileName = "(190)-test17.png"
-fileName = "test6.png"
-#fileName = "Screenshot1.png"
 
 img:ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
 img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
@@ -56,28 +118,27 @@ for x in range(img.shape[1] // step_x):
       mask_inv = get_mask_from_gray(img, upper_val=up_value)      
       islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
-      i=0
-      while i != len(islandsInFragment):
-        if len(islandsInFragment[i]) <= 3 or islandsInFragment[i].down - islandsInFragment[i].top <= 2:
-          del islandsInFragment[i]
-        else:
-          i+=1
+      # i=0
+      # while i != len(islandsInFragment):
+      #   if len(islandsInFragment[i]) <= 3 or islandsInFragment[i].down - islandsInFragment[i].top <= 2:
+      #     del islandsInFragment[i]
+      #   else:
+      #     i+=1
 
       one_of_works = False
 
-      for single in islandsInFragment:
-        if x == 0:
-          if len(single) >= step_x and (single.down == (y+1)*step_y or single.right == (x+1)*step_x or single.top == y*step_y):
-            one_of_works = True
-            break
-        elif x == count_of_ecg:
-          if len(single) >= step_x and (single.down == (y+1)*step_y or single.left == x*step_x or single.top == y*step_y):
-            one_of_works = True
-            break
-        else:
-          if len(single) >= step_x and single.left == x*step_x and single.right == (x+1)*step_x:
-            one_of_works = True
-            break
+      # #for single in islandsInFragment:
+      # if x == 0:
+      #   #if len(single) >= step_x and (single.down == (y+1)*step_y or single.right == (x+1)*step_x or single.top == y*step_y):
+      #     one_of_works = True
+      #     break
+      # elif x == count_of_ecg:
+      #   #if len(single) >= step_x and (single.down == (y+1)*step_y or single.left == x*step_x or single.top == y*step_y):
+      #     one_of_works = True
+      #     break
+      # else:
+      one_of_works = middle_fragment(islandsInFragment,x,y,step_x,step_y)
+         
       
       if one_of_works == True:
         print(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
@@ -93,11 +154,8 @@ for x in range(img.shape[1] // step_x):
         #------------------------------------------------------
         break
 
-      islandsInFragment.sort(key=len, reverse=True)
-      i=0
-      #while i < len(islandsInFragment):
-      #  if islandsInFragment[i] 
       
+
 cv2.imwrite(PATH_TO_OUTPUT_ + "islands1.png", img_isl)
 
 

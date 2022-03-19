@@ -4,6 +4,9 @@ from pprint import pprint as pp
 from copy import deepcopy
 from re import X
 from turtle import left
+from matplotlib.colors import to_rgba_array
+
+from pandas import array
 from logger import lg
 import cProfile
 
@@ -68,10 +71,9 @@ def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_
   if len(islands) == 0:
     return False
 
-  #islands.sort(key=lambda x: (x.right - x.left), reverse=True)
   #if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
   #  return True
-
+  islands.sort(key=lambda x: (x.right - x.left), reverse=True)
   islands.sort(key=lambda x: x.left)
 
   for single in islands:
@@ -100,19 +102,23 @@ def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_
 
 def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
 
+  if len(islands) == 0:
+    return False
+  
   wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
   success = False
   dir_come_from = wall_dir['scum']
   dir_come_to = wall_dir['scum']
 
-  if len(islands) == 0:
-    return success
-
+  array_of_to = []
+  array_of_from = []
+  
   #if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
   #  return True
 
-  islands.sort(key=lambda x: (x.right - x.left), reverse=True)            #don't touch nahui!
+  
   islands.sort(key=lambda x: x.left)
+  #islands.sort(key=lambda x: (x.right - x.left), reverse=True)            #don't touch
 
   for single in islands:
 
@@ -128,14 +134,14 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
       return True
 
     if dir_come_from == wall_dir["left"] and dir_come_to == wall_dir["scum"]:
-      return False
+      continue
 
     if dir_come_to == wall_dir['scum']:
       dir_come_from = wall_dir['scum']
     else:
       success = True
 
-  return success        
+  return success
 
 #fileName = "nameless.png"
 fileName = "test3.png"
@@ -150,35 +156,53 @@ fragmentsWithIslands:list[list[list[Island]]] = []
 #-----------------
 # Это база!
 count_of_ecg = 4
+count_of_col = 5
 #-----------------
 
-step_x = img.shape[1] // 5
+step_x = img.shape[1] // count_of_col
 step_y = img.shape[0] // count_of_ecg
 lg.debug(f"step_x [{step_x}], step_y [{step_y}] ")
 
 mask_inv = get_mask_from_gray(img, upper_val=100)
 img_isl        :np.ndarray   = img_clr.copy()
 
-lg.info(f"start fragment building")
+black_saturation = [[0 for y in range(img.shape[1] // step_x)] for x in range(img.shape[1] // step_x)]
 
-for x in range(img.shape[1] // step_x):
-  fragmentsWithIslands.append([])
-  for y in range(img.shape[0] // step_y):
+fragmentsWithIslands = [[] for x in range(img.shape[1] // step_x)]
+sequence = [x for x in range(img.shape[1] // step_x)]
+y_sequence = [y for y in range(img.shape[0] // step_y)]
+x_sequence = []
+
+mid = len(sequence) // 2
+x_sequence.append(mid)
+l1, l2 = mid, mid
+
+while l1 > 0 and l2 < len(sequence):
+  if l1 > 0: 
+    l1 -= 1
+    x_sequence.append(l1)
+  if l2 < len(sequence)-1: 
+    l2 += 1
+    x_sequence.append(l2)
+
+lg.info(f"start fragment building")
+for x in x_sequence:
+  for y in y_sequence:
     bottom_line = 150
     upper_line = 255
     step = 1
     for up_value in range(bottom_line,upper_line,step):
       largest_island_has_been_found = False
-      lg.debug(f">> step [{x}|{y}][{x*step_x}, {y*step_y}]")
+      lg.debug(f">> step [{x}|{y}][{up_value}]")
       mask_inv = get_mask_from_gray(img, upper_val=up_value)      
       islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
-      # i=0
-      # while i != len(islandsInFragment):
-      #   if len(islandsInFragment[i]) <= 3 or islandsInFragment[i].down - islandsInFragment[i].top <= 2:
-      #     del islandsInFragment[i]
-      #   else:
-      #     i+=1
+      #i=0
+      #while i != len(islandsInFragment):
+      #  if len(islandsInFragment[i]) <= 3 or islandsInFragment[i].down - islandsInFragment[i].top <= 2:
+      #    del islandsInFragment[i]
+      #  else:
+      #    i+=1
 
       one_of_works = False
 

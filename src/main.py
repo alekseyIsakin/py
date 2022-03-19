@@ -21,6 +21,43 @@ initLogger(lg.DEBUG)
 
 lg.info("Start")
 
+def check_from_dir(island:Island):
+  
+  wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
+  dir_come_from = wall_dir['scum']
+  ultraleft_lines = island.get_lines_at_index(island.left)
+  
+  if island.left == x*step_x:
+    dir_come_from = wall_dir['left']              # if island come from left border
+  else:
+    for left_line in ultraleft_lines:
+      if left_line['top'] == y*step_y:               # if island come from top border
+        dir_come_from = wall_dir['top']
+      elif left_line['down'] == (y+1)*step_y:    # if island come from down border
+        dir_come_from = wall_dir['down']
+      else:                                       # if island - scum GAGAGA
+        dir_come_from = wall_dir['scum']
+  
+  return dir_come_from
+
+def check_to_dir(island:Island):
+  wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
+  dir_come_to = wall_dir['scum']
+
+  if island.right >= (x+1)*step_x-1:
+      dir_come_to = wall_dir['right']
+  else:
+    ultraright_lines = island.get_lines_at_index(island.right)
+    for right_line in ultraright_lines:
+      if right_line['top'] == y*step_y:
+        dir_come_to = wall_dir['top']
+      elif right_line['down'] == (y+1)*step_y:
+        dir_come_to = wall_dir['down']
+      else:                                       
+          dir_come_to = wall_dir['scum']
+
+  return dir_come_to
+
 def middle_fragment(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
 
   wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
@@ -33,45 +70,24 @@ def middle_fragment(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
 
   islands.sort(key=lambda x: (x.right - x.left), reverse=True)
   if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
-    success = True
-    return success
+    return True
 
   islands.sort(key=lambda x: x.left)
 
   for single in islands:
-    ultraleft_lines = single.get_lines_at_index(single.left)
-    if single.left == x*step_x:
-      dir_come_from = wall_dir['left']              # if island come from left border
-    else:
-      for left_line in ultraleft_lines:
-        if left_line['top'] == y*step_y:               # if island come from top border
-          dir_come_from = wall_dir['top']
-          break
-        elif left_line['down'] == (y+1)*step_y:    # if island come from down border
-          dir_come_from = wall_dir['down']
-          break
-        else:                                       # if island - scum GAGAGA
-          dir_come_from = wall_dir['scum']
+    dir_come_from = check_from_dir(single)
 
     if dir_come_from == wall_dir['scum'] or (dir_come_from != dir_come_to and dir_come_to != wall_dir['scum']):
       success = False
       continue
 
-    if single.right >= (x+1)*step_x-1:
-      dir_come_to = wall_dir['right']
-      success = True
-      return success
-    else:
-      ultraright_lines = single.get_lines_at_index(single.right)
-      for right_line in ultraright_lines:
-        if right_line['top'] == y*step_y:
-          dir_come_to = wall_dir['top']
-          break
-        elif right_line['down'] == (y+1)*step_y:
-          dir_come_to = wall_dir['down']
-          break
-        else:                                       
-            dir_come_to = wall_dir['scum']
+    dir_come_to = check_to_dir(single)
+
+    if dir_come_to == wall_dir['right']:
+      return True
+
+    if dir_come_from == wall_dir["left"] and dir_come_to == wall_dir["scum"]:
+      return False
 
     if dir_come_to == wall_dir['scum']:
       dir_come_from = wall_dir['scum']
@@ -79,11 +95,9 @@ def middle_fragment(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
       success = True
 
   return success        
- 
-  
 
-fileName = "nameless.png"
-#fileName = "(190)-test17.png"
+#fileName = "nameless.png"
+fileName = "test3.png"
 
 img:ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
 img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
@@ -109,12 +123,12 @@ lg.info(f"start fragment building")
 for x in range(img.shape[1] // step_x):
   fragmentsWithIslands.append([])
   for y in range(img.shape[0] // step_y):
-    bottom_line = 170
+    bottom_line = 150
     upper_line = 255
     step = 1
     for up_value in range(bottom_line,upper_line,step):
       largest_island_has_been_found = False
-      #lg.debug(f">> step [{x}|{y}][{x*step_x}, {y*step_y}]")
+      lg.debug(f">> step [{x}|{y}][{x*step_x}, {y*step_y}]")
       mask_inv = get_mask_from_gray(img, upper_val=up_value)      
       islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
@@ -128,16 +142,18 @@ for x in range(img.shape[1] // step_x):
       one_of_works = False
 
       # #for single in islandsInFragment:
-      # if x == 0:
+      if x == 0:
+        one_of_works = True
       #   #if len(single) >= step_x and (single.down == (y+1)*step_y or single.right == (x+1)*step_x or single.top == y*step_y):
       #     one_of_works = True
       #     break
-      # elif x == count_of_ecg:
+      elif x == count_of_ecg:
+        one_of_works = True
       #   #if len(single) >= step_x and (single.down == (y+1)*step_y or single.left == x*step_x or single.top == y*step_y):
       #     one_of_works = True
       #     break
-      # else:
-      one_of_works = middle_fragment(islandsInFragment,x,y,step_x,step_y)
+      else:
+        one_of_works = middle_fragment(islandsInFragment,x,y,step_x,step_y)
          
       
       if one_of_works == True:
@@ -146,7 +162,7 @@ for x in range(img.shape[1] // step_x):
         img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
         img_isl = draw_islands(islandsInFragment, img_isl)
         img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
-        #lg.info(f"{up_value}, {len(islandsInFragment)}")
+        lg.info(f"{up_value}, {len(islandsInFragment)}")
         fragmentsWithIslands[x].append(islandsInFragment.copy())
         cv2.imshow('w', img_isl)
         cv2.imwrite(r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\output\\" + f"{up_value}_{len(islandsInFragment)}.png", img_isl)

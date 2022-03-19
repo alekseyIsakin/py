@@ -1,95 +1,231 @@
+from audioop import reverse
+from distutils.archive_util import make_archive
 from pprint import pprint as pp
-from funcs import *
-from paths import PATH_TO_INPUT_JPG
+from copy import deepcopy
+from re import X
+from turtle import left
+from logger import lg
+import cProfile
 
-# E:\Piter\project\src\input.jpg
-img = cv2.imread(PATH_TO_INPUT_JPG, cv2.IMREAD_GRAYSCALE)
-img_clr = cv2.imread(PATH_TO_INPUT_JPG)
+from logger import lg, initLogger
 
-mask_inv = get_mask_from_gray(img)
+from numpy import diff, ndarray
+from analisis.loader.img_analizer import *
+from analisis.loader.mask_loader import *
+from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate
+from drawing.draw import *
+from drawing.show import *
+from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
 
-graph = get_lines(mask_inv)
+initLogger(lg.DEBUG)
 
-ecg = []
-raw_islands = []
+lg.info("Start")
 
-time_start = time.time()
-print ("first build islands")
+def check_from_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
+  
+  wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
+  dir_come_from = wall_dir['scum']
+  ultraleft_lines = island.get_lines_at_index(island.left)
+  
+  if island.left == x*step_x:
+    dir_come_from = wall_dir['left']              # if island come from left border
+  else:
+    for left_line in ultraleft_lines:
+      if left_line['top'] == y*step_y:               # if island come from top border
+        dir_come_from = wall_dir['top']
+      elif left_line['down'] == (y+1)*step_y:    # if island come from down border
+        dir_come_from = wall_dir['down']
+      else:                                       # if island - scum GAGAGA
+        dir_come_from = wall_dir['scum']
+  
+  return dir_come_from
 
-while (len(graph) != 0):
-  temp = [graph[0]]
+def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
+  wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
+  dir_come_to = wall_dir['scum']
 
-  for k in graph[1:]:
-    if is_neighbours(temp[-1], k):
-      # slow_draw_islands([[temp[-1]], [k]], img_clr.copy(), clr=(0,0,255), sleeptime=100, draw_over=True, scale=(3,3))
+  if island.right >= (x+1)*step_x:
+      dir_come_to = wall_dir['right']
+  else:
+    ultraright_lines = island.get_lines_at_index(island.right)
+    for right_line in ultraright_lines:
+      if right_line['top'] == y*step_y:
+        dir_come_to = wall_dir['top']
+      elif right_line['down'] == (y+1)*step_y:
+        dir_come_to = wall_dir['down']
+      else:                                       
+          dir_come_to = wall_dir['scum']
+
+  return dir_come_to
+
+def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
+  wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
+  success = False
+  dir_come_from = wall_dir['scum']
+  dir_come_to = wall_dir['scum']
+  first_island = True
+
+  if len(islands) == 0:
+    return False
+
+  #islands.sort(key=lambda x: (x.right - x.left), reverse=True)
+  #if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
+  #  return True
+
+  islands.sort(key=lambda x: x.left)
+
+  for single in islands:
+    
+    dir_come_from = check_from_dir(single,x,y,step_x,step_y)
+
+    if (dir_come_from == wall_dir['scum'] and first_island == False) or (dir_come_from != dir_come_to and dir_come_to != wall_dir['scum']):
+      success = False
       continue
-    
-    temp.append(k)
-  
-  # slow_draw_island(temp, img_clr.copy(), sleeptime=500, clr=(0,255,0), draw_over=True)
-  isl = Island()
 
-  for i in temp:
-    isl.append_one_line(i)
-    graph.remove(i)
-  raw_islands.append(isl)
+    dir_come_to = check_to_dir(single,x,y,step_x,step_y)
 
-time_end = time.time()
-print ("finish first build islands", time_end-time_start, end="\n\n\n")
+    if dir_come_to == wall_dir['right']:
+      return True
 
-isl_rest = 0
-complete = []
-ecg = raw_islands
+    if dir_come_from == wall_dir["left"] and dir_come_to == wall_dir["scum"]:
+      return False
 
-print(len(ecg))
-# cv2.imwrite(PATH_TO_ISLANDS_JPG, draw_islands(raw_islands, img_clr.copy(), draw_over=True))
+    if dir_come_to == wall_dir['scum']:
+      dir_come_from = wall_dir['scum']
+    else:
+      first_island = False
+      success = True
 
-time_start = time.time()
-print ("second build islands")    
-while len(ecg) > 0:
-  start_check_island = ecg[-1][0]
+  return success  
 
-  isl_rest = 0
-  
-  while isl_rest < len(ecg)-1:
-    found = False
-    islands = ecg[isl_rest]
-    
-    if (ecg[-1].minW > islands.maxW or
-        ecg[-1].maxW < islands.minW or
-        ecg[-1].minH > islands.maxH or
-        ecg[-1].maxH < islands.minH):
-        # slow_draw_islands([ecg[-1], islands], mask_inv, sleeptime=3)
-        isl_rest += 1
-        continue
+def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
 
-    for line in islands:
-      for line2 in ecg[-1]:
-        if not is_neighbours(line, line2):
-            ecg[-1] = ecg[-1] + islands
-            tmp = ecg[-1]
-            # slow_draw_island(ecg[-1], mask_inv)
-            ecg.remove(islands)
-            isl_rest = 0
-            found = True
-            break
-      if found: 
-          break
+  wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
+  success = False
+  dir_come_from = wall_dir['scum']
+  dir_come_to = wall_dir['scum']
+
+  if len(islands) == 0:
+    return success
+
+  #if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
+  #  return True
+
+  islands.sort(key=lambda x: (x.right - x.left), reverse=True)            #don't touch nahui!
+  islands.sort(key=lambda x: x.left)
+
+  for single in islands:
+
+    dir_come_from = check_from_dir(single,x,y,step_x,step_y)
+
+    if dir_come_from == wall_dir['scum'] or (dir_come_from != dir_come_to and dir_come_to != wall_dir['scum']):
+      success = False
+      continue
+
+    dir_come_to = check_to_dir(single,x,y,step_x,step_y)
+
+    if dir_come_to == wall_dir['right']:
+      return True
+
+    if dir_come_from == wall_dir["left"] and dir_come_to == wall_dir["scum"]:
+      return False
+
+    if dir_come_to == wall_dir['scum']:
+      dir_come_from = wall_dir['scum']
+    else:
+      success = True
+
+  return success        
+
+#fileName = "nameless.png"
+fileName = "test3.png"
+
+img:ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
+img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
+
+lg.info(f"load image '{fileName}'")
+lg.debug(f"resolution '{fileName}' is {img.shape}")
+fragmentsWithIslands:list[list[list[Island]]] = []
+
+#-----------------
+# Это база!
+count_of_ecg = 4
+#-----------------
+
+step_x = img.shape[1] // 5
+step_y = img.shape[0] // count_of_ecg
+lg.debug(f"step_x [{step_x}], step_y [{step_y}] ")
+
+mask_inv = get_mask_from_gray(img, upper_val=100)
+img_isl        :np.ndarray   = img_clr.copy()
+
+lg.info(f"start fragment building")
+
+for x in range(img.shape[1] // step_x):
+  fragmentsWithIslands.append([])
+  for y in range(img.shape[0] // step_y):
+    bottom_line = 150
+    upper_line = 255
+    step = 1
+    for up_value in range(bottom_line,upper_line,step):
+      largest_island_has_been_found = False
+      lg.debug(f">> step [{x}|{y}][{x*step_x}, {y*step_y}]")
+      mask_inv = get_mask_from_gray(img, upper_val=up_value)      
+      islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
+
+      # i=0
+      # while i != len(islandsInFragment):
+      #   if len(islandsInFragment[i]) <= 3 or islandsInFragment[i].down - islandsInFragment[i].top <= 2:
+      #     del islandsInFragment[i]
+      #   else:
+      #     i+=1
+
+      one_of_works = False
+
+      # #for single in islandsInFragment:
+      if x == 0:
+        one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
+      #   #if len(single) >= step_x and (single.down == (y+1)*step_y or single.right == (x+1)*step_x or single.top == y*step_y):
+      #     one_of_works = True
+      #     break
+      elif x == count_of_ecg:
+        one_of_works = True
+      #   #if len(single) >= step_x and (single.down == (y+1)*step_y or single.left == x*step_x or single.top == y*step_y):
+      #     one_of_works = True
+      #     break
+      else:
+        one_of_works = middle_fragments(islandsInFragment,x,y,step_x,step_y)
+         
       
-    if not found: 
-      isl_rest += 1
+      if one_of_works == True:
+        print(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
+        #------------------------------------------------------
+        img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
+        img_isl = draw_islands(islandsInFragment, img_isl)
+        img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
+        lg.info(f"{up_value}, {len(islandsInFragment)}")
+        fragmentsWithIslands[x].append(islandsInFragment.copy())
+        cv2.imshow('w', img_isl)
+        cv2.imwrite(r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\output\\" + f"{up_value}_{len(islandsInFragment)}.png", img_isl)
+        cv2.waitKey(10)
+        #------------------------------------------------------
+        break
 
-    # print("--------------------------", len(ecg))
+      
 
-  complete.append(ecg.pop())
-    # draw_islands(complete, mask_inv, clr=(255,0,0))
-time_end = time.time()
-print ("finish second build islands", time_end-time_start, end="\n\n\n")  
+cv2.imwrite(PATH_TO_OUTPUT_ + "islands1.png", img_isl)
 
-cv2.imwrite(PATH_TO_ISLANDS_JPG, draw_islands(complete, img_clr.copy()))
 
-# t = get_low_up(get_lines(mask_inv), img)
+img_isl     :np.ndarray   = np.full_like(img_clr, 255)
+complete_isl:list[Island] = build_islands_from_fragmets(fragmentsWithIslands, step_x, step_y)
 
-cv2.imwrite(PATH_TO_MASK_JPG,mask_inv)
-# cv2.imwrite(PATH_TO_OUTPUT_JPG,img)
-# cv2.imwrite(r'../images/output/output.png',blank3)
+for isl in complete_isl:
+  isl.solidify()
+
+complete_isl = sorted(complete_isl, key=len)
+
+img_isl = draw_islands(complete_isl, img_isl)
+
+cv2.imwrite(PATH_TO_OUTPUT_ + "FinalCut.png",img_isl)
+
+lg.info("fin")

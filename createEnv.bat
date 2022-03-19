@@ -1,4 +1,4 @@
-set py="pathToPython" 
+set py="" 
 
 %py% --version
 

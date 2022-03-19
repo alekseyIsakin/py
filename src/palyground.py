@@ -12,16 +12,12 @@ from analisis.loader.mask_loader import *
 from analisis.loader.islands import islands_from_lines
 from drawing.draw import *
 from drawing.show import *
-from constant.paths import PATH_TO_IMAGES, PATH_TO_INPUT_JPG, \
-                  PATH_TO_INPUT_, \
-                  PATH_TO_ISLANDS_JPG,  \
-                  PATH_TO_MASK_JPG, \
-                  PATH_TO_MASK_, \
-                  PATH_TO_OUTPUT_
+from constant.paths import PATH_TO_INPUT_
+
 import cProfile
 import pickle
 import timeit
-from analisis.classes.classes import Line, Island, line_np_type
+from analisis.classes.classes import Line, Island, dtype_line
 
 # lg.info("palyground start")
 # file = "input.jpg"
@@ -49,47 +45,65 @@ img:ndarray     = cv2.imread(PATH_TO_INPUT_ + file, cv2.IMREAD_COLOR)
 # with open("test2.bin", mode="wb") as f:
 #     pickle.dump({}, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-def test_add(isl1:Island, isl2:Island):
-  isl1 = isl1 + isl2
-  pass
-def test_get_lines(isl:Island, lst):
-  for i in lst:
-    isl.get_lines_at_index(i)
+# def test_add(isl1:Island, isl2:Island):
+#   isl1 = isl1 + isl2
+#   pass
+# def test_get_lines(isl:Island, lst):
+#   for i in lst:
+#     isl.get_lines_at_index(i)
 
-def test_pop(isl:list):
-  while len(isl) > 0:
-    isl.pop()
+# def test_pop(isl:list):
+#   while len(isl) > 0:
+#     isl.pop()
 
-def test_extend(isl:list, isl2:list):
-  isl.extend(isl2)
+# def test_extend(isl:list, isl2:list):
+#   isl.extend(isl2)
 
-isl = Island()
-isl2 = Island()
+# isl = Island()
+# isl2 = Island()
 
-cnt = 1000
-l = np.empty(cnt, dtype=line_np_type)
-l['index'] = np.random.randint(0,100, cnt)
-l['top'] = np.random.randint(0,100, cnt)
-l['down'] = np.random.randint(0,100, cnt)
-isl += l
+# cnt = 1000
+# l = np.empty(cnt, dtype=line_np_type)
+# l['index'] = np.random.randint(0,100, cnt)
+# l['top'] = np.random.randint(0,100, cnt)
+# l['down'] = np.random.randint(0,100, cnt)
+# isl += l
 
-cnt = 10
-l = np.empty(cnt, dtype=line_np_type)
-l['index'] = np.random.randint(0,100, cnt)
-l['top'] = np.random.randint(0,100, cnt)
-l['down'] = np.random.randint(0,100, cnt)
-isl2 += l
+# cnt = 10
+# l = np.empty(cnt, dtype=line_np_type)
+# l['index'] = np.random.randint(0,100, cnt)
+# l['top'] = np.random.randint(0,100, cnt)
+# l['down'] = np.random.randint(0,100, cnt)
+# isl2 += l
 
-isl = [i for i in range(cnt) ]
-isl2 = [i for i in range(cnt) ]
-# with open("", 'w') as f:
-# isl2 = np.arange(0, cnt, 1)
+# isl = [i for i in range(cnt) ]
+# isl2 = [i for i in range(cnt) ]
+# # with open("", 'w') as f:
+# # isl2 = np.arange(0, cnt, 1)
 
-setup="""
-from __main__ import test_extend, isl, isl2
-"""
+# setup="""
+# from __main__ import test_extend, isl, isl2
+# """
 
-tm = timeit.repeat('test_extend(isl, isl2)', setup=setup, repeat=1_000, number=10_000)
-print(np.average(tm))
-# imwrite(PATH_TO_OUTPUT_ + "islands.png", isl)
-# lg.info(f"fin")
+# tm = timeit.repeat('test_extend(isl, isl2)', setup=setup, repeat=1_000, number=10_000)
+# print(np.average(tm))
+# # imwrite(PATH_TO_OUTPUT_ + "islands.png", isl)
+# # lg.info(f"fin")
+
+sequence = [i for i in range(10)]
+x_sequence = []
+
+mid = len(sequence) // 2
+x_sequence.append(mid)
+l1, l2 = mid, mid
+
+while l1 > 0 and l2 < len(sequence):
+  if l1 > 0: 
+    l1 -= 1
+    x_sequence.append(l1)
+  if l2 < len(sequence)-1: 
+    l2 += 1
+    x_sequence.append(l2)
+
+print(sequence)
+print(x_sequence)

@@ -1,15 +1,10 @@
-from audioop import reverse
-from distutils.archive_util import make_archive
-from pprint import pprint as pp
-from copy import deepcopy
-from re import X
-from turtle import left
-from logger import lg
 import cProfile
 
+from pprint import pprint as pp
+from logger import lg
 from logger import lg, initLogger
 
-from numpy import diff, ndarray
+from numpy import ndarray
 from analisis.loader.img_analizer import *
 from analisis.loader.mask_loader import *
 from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate
@@ -108,8 +103,6 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   if len(islands) == 0:
     return success
 
-  #if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
-  #  return True
 
   islands.sort(key=lambda x: (x.right - x.left), reverse=True)            #don't touch nahui!
   islands.sort(key=lambda x: x.left)
@@ -150,26 +143,44 @@ fragmentsWithIslands:list[list[list[Island]]] = []
 #-----------------
 # Это база!
 count_of_ecg = 4
+count_of_col = 5
 #-----------------
 
-step_x = img.shape[1] // 5
+step_x = img.shape[1] // count_of_col
 step_y = img.shape[0] // count_of_ecg
 lg.debug(f"step_x [{step_x}], step_y [{step_y}] ")
 
 mask_inv = get_mask_from_gray(img, upper_val=100)
 img_isl        :np.ndarray   = img_clr.copy()
 
-lg.info(f"start fragment building")
+black_saturation = [[0 for y in range(img.shape[1] // step_x)] for x in range(img.shape[1] // step_x)]
 
-for x in range(img.shape[1] // step_x):
-  fragmentsWithIslands.append([])
-  for y in range(img.shape[0] // step_y):
-    bottom_line = 150
+fragmentsWithIslands = [[] for x in range(img.shape[1] // step_x)]
+sequence = [x for x in range(img.shape[1] // step_x)]
+y_sequence = [y for y in range(img.shape[0] // step_y)]
+x_sequence = []
+
+mid = len(sequence) // 2
+x_sequence.append(mid)
+l1, l2 = mid, mid
+
+while l1 > 0 and l2 < len(sequence):
+  if l1 > 0: 
+    l1 -= 1
+    x_sequence.append(l1)
+  if l2 < len(sequence)-1: 
+    l2 += 1
+    x_sequence.append(l2)
+
+lg.info(f"start fragment building")
+for x in x_sequence:
+  for y in y_sequence:
+    bottom_line = 50
     upper_line = 255
-    step = 1
+    step = 5
     for up_value in range(bottom_line,upper_line,step):
       largest_island_has_been_found = False
-      lg.debug(f">> step [{x}|{y}][{x*step_x}, {y*step_y}]")
+      lg.debug(f">> step [{x}|{y}][{up_value}]")
       mask_inv = get_mask_from_gray(img, upper_val=up_value)      
       islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
@@ -205,6 +216,7 @@ for x in range(img.shape[1] // step_x):
         img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
         lg.info(f"{up_value}, {len(islandsInFragment)}")
         fragmentsWithIslands[x].append(islandsInFragment.copy())
+        black_saturation[x][y] = up_value
         cv2.imshow('w', img_isl)
         cv2.imwrite(r"E:\NIRS-BrTSU\py-b\JuPiter-main\images\output\\" + f"{up_value}_{len(islandsInFragment)}.png", img_isl)
         cv2.waitKey(10)

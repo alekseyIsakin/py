@@ -21,7 +21,7 @@ initLogger(lg.DEBUG)
 
 lg.info("Start")
 
-def check_from_dir(island:Island):
+def check_from_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
   
   wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
   dir_come_from = wall_dir['scum']
@@ -40,11 +40,11 @@ def check_from_dir(island:Island):
   
   return dir_come_from
 
-def check_to_dir(island:Island):
+def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
   wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
   dir_come_to = wall_dir['scum']
 
-  if island.right >= (x+1)*step_x-1:
+  if island.right >= (x+1)*step_x:
       dir_come_to = wall_dir['right']
   else:
     ultraright_lines = island.get_lines_at_index(island.right)
@@ -58,7 +58,47 @@ def check_to_dir(island:Island):
 
   return dir_come_to
 
-def middle_fragment(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
+def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
+  wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
+  success = False
+  dir_come_from = wall_dir['scum']
+  dir_come_to = wall_dir['scum']
+  first_island = True
+
+  if len(islands) == 0:
+    return False
+
+  #islands.sort(key=lambda x: (x.right - x.left), reverse=True)
+  #if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
+  #  return True
+
+  islands.sort(key=lambda x: x.left)
+
+  for single in islands:
+    
+    dir_come_from = check_from_dir(single,x,y,step_x,step_y)
+
+    if (dir_come_from == wall_dir['scum'] and first_island == False) or (dir_come_from != dir_come_to and dir_come_to != wall_dir['scum']):
+      success = False
+      continue
+
+    dir_come_to = check_to_dir(single,x,y,step_x,step_y)
+
+    if dir_come_to == wall_dir['right']:
+      return True
+
+    if dir_come_from == wall_dir["left"] and dir_come_to == wall_dir["scum"]:
+      return False
+
+    if dir_come_to == wall_dir['scum']:
+      dir_come_from = wall_dir['scum']
+    else:
+      first_island = False
+      success = True
+
+  return success  
+
+def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
 
   wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
   success = False
@@ -68,20 +108,21 @@ def middle_fragment(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
   if len(islands) == 0:
     return success
 
-  islands.sort(key=lambda x: (x.right - x.left), reverse=True)
-  if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
-    return True
+  #if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
+  #  return True
 
+  islands.sort(key=lambda x: (x.right - x.left), reverse=True)            #don't touch nahui!
   islands.sort(key=lambda x: x.left)
 
   for single in islands:
-    dir_come_from = check_from_dir(single)
+
+    dir_come_from = check_from_dir(single,x,y,step_x,step_y)
 
     if dir_come_from == wall_dir['scum'] or (dir_come_from != dir_come_to and dir_come_to != wall_dir['scum']):
       success = False
       continue
 
-    dir_come_to = check_to_dir(single)
+    dir_come_to = check_to_dir(single,x,y,step_x,step_y)
 
     if dir_come_to == wall_dir['right']:
       return True
@@ -143,7 +184,7 @@ for x in range(img.shape[1] // step_x):
 
       # #for single in islandsInFragment:
       if x == 0:
-        one_of_works = True
+        one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
       #   #if len(single) >= step_x and (single.down == (y+1)*step_y or single.right == (x+1)*step_x or single.top == y*step_y):
       #     one_of_works = True
       #     break
@@ -153,7 +194,7 @@ for x in range(img.shape[1] // step_x):
       #     one_of_works = True
       #     break
       else:
-        one_of_works = middle_fragment(islandsInFragment,x,y,step_x,step_y)
+        one_of_works = middle_fragments(islandsInFragment,x,y,step_x,step_y)
          
       
       if one_of_works == True:

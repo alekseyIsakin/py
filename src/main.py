@@ -25,37 +25,44 @@ def _get_dir_dictionary()->dict:
 
 
 def check_from_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
-  wall_dir = _get_dir_dictionary()
-  dir_come_from = wall_dir['scum']
-  ultraleft_lines = island.get_lines_at_index(island.left)
+  WALL_DIR = _get_dir_dictionary()
+  dir_come_from = WALL_DIR['none']
+  ultraleft_lines = island.get_lines_at_index
   
+  mid = island.left + island.width//2
+  check_index = island.left
+
   if island.left == x*step_x:
-    dir_come_from = wall_dir['left']              # if island come from left border
-  else:
-    for left_line in ultraleft_lines:
-      if left_line['top'] == y*step_y:               # if island come from top border
-        dir_come_from = wall_dir['top']
-      elif left_line['down'] == (y+1)*step_y:    # if island come from down border
-        dir_come_from = wall_dir['down']
-      else:                                       # if island - scum GAGAGA
-        dir_come_from = wall_dir['scum']
-  
+    return WALL_DIR['left']      
+      
+  while check_index <= mid and dir_come_from == WALL_DIR['none']:
+    for left_line in ultraleft_lines(check_index):
+      if left_line['top'] == y*step_y:
+        dir_come_from = WALL_DIR['top']
+      elif left_line['down'] == (y+1)*step_y:
+        dir_come_from = WALL_DIR['down']
+    check_index += 1
+      
+  if dir_come_from == WALL_DIR['none']:
+    dir_come_from = WALL_DIR['scum']
+
   return dir_come_from
 
 
 
 def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
   WALL_DIR = _get_dir_dictionary()
-  dir_come_to = WALL_DIR['scum']
+  dir_come_to = WALL_DIR['none']
+  ultraright_lines = island.get_lines_at_index
 
-  if island.right >= (x+1)*step_x -1:
+  if island.right == (x+1)*step_x:
     return WALL_DIR['right']
   
-  mid = island.left + (island.right - island.left)/2
+  mid = island.left + island.width//2
   check_index = island.right
 
-  while check_index > mid and dir_come_to != WALL_DIR['none']:
-    for right_line in island.get_lines_at_index(check_index):
+  while check_index > mid and dir_come_to == WALL_DIR['none']:
+    for right_line in ultraright_lines(check_index):
       if right_line['top'] == y*step_y:
         dir_come_to = WALL_DIR['top']
         break
@@ -63,53 +70,16 @@ def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
         dir_come_to = WALL_DIR['down']
         break
     check_index -= 1
+      
+  if dir_come_to == WALL_DIR['none']:
+    dir_come_to = WALL_DIR['scum']
   return dir_come_to
-
-def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
-  wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
-  success = False
-  dir_come_from = wall_dir['scum']
-  dir_come_to = wall_dir['scum']
-  first_island = True
-
-  if len(islands) == 0:
-    return False
-
-  #islands.sort(key=lambda x: (x.right - x.left), reverse=True)
-  #if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
-  #  return True
-
-  islands.sort(key=lambda x: x.left)
-
-  for single in islands:
-    
-    dir_come_from = check_from_dir(single,x,y,step_x,step_y)
-
-    if (dir_come_from == wall_dir['scum'] and first_island == False) or (dir_come_from != dir_come_to and dir_come_to != wall_dir['scum']):
-      success = False
-      continue
-
-    dir_come_to = check_to_dir(single,x,y,step_x,step_y)
-
-    if dir_come_to == wall_dir['right']:
-      return True
-
-    if dir_come_from == wall_dir["left"] and dir_come_to == wall_dir["scum"]:
-      return False
-
-    if dir_come_to == wall_dir['scum']:
-      dir_come_from = wall_dir['scum']
-    else:
-      first_island = False
-      success = True
-
-  return success  
 
 
 
 def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
   if len(islands) == 0:
-    return False
+    return []
   
   WALL_DIR = _get_dir_dictionary()
   dir_fr_counter = {key:0 for key in WALL_DIR.values()}
@@ -118,14 +88,19 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   dir_couple = namedtuple('couple', ['fr', 'to'])
   fr_to_array:list[dir_couple] = []
 
-  success = True
   dir_come_from = WALL_DIR['scum']
   dir_come_to = WALL_DIR['scum']
 
-  # islands.sort(key=lambda x: (x.right - x.left), reverse=True)            #don't touch nahui!
   islands.sort(key=lambda x: x.left)
 
   for single in islands:
+    
+    # if (single.right < (x+1) * step_x and
+    #     single.left  > (x)   * step_x and
+    #     single.down  < (y+1) * step_y and
+    #     single.top   > (y)   * step_y):
+    #     continue
+    
     dir_come_from = WALL_DIR['scum']
     dir_come_to = WALL_DIR['scum']
 
@@ -137,33 +112,69 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
       dir_fr_counter[dir_come_from] += 1
       dir_to_counter[dir_come_to] += 1
       continue
-
+    
     dir_come_to = check_to_dir(single,x,y,step_x,step_y)
 
+    # if single.width <= 3:
+    #   dir_come_to = WALL_DIR['scum']
+    
     fr_to_array.append (
       dir_couple(fr=dir_come_from, to=dir_come_to))
+    
     dir_fr_counter[dir_come_from] += 1
     dir_to_counter[dir_come_to] += 1
   x = 10
 
-  if all([i.fr==WALL_DIR['scum'] for i in fr_to_array]):
-    return False
+  if len(fr_to_array) == 0:
+    return []
 
-  if all([i.to==WALL_DIR['scum'] for i in fr_to_array if i.fr == WALL_DIR['left']]):
-    return False
+  if all([i.fr==WALL_DIR['scum'] for i in fr_to_array]):
+    return []
+
+  if all([i.fr == WALL_DIR['left'] and i.to==WALL_DIR['scum'] for i in fr_to_array]):
+    return []
   
-  if all([i.fr==WALL_DIR['scum'] for i in fr_to_array if i.to == WALL_DIR['right']]):
-    return False
+  if all([i.fr==WALL_DIR['scum'] and i.to == WALL_DIR['right'] for i in fr_to_array]):
+    return []
 
   total_top = dir_fr_counter[WALL_DIR['top']] + dir_to_counter[WALL_DIR['top']]
   total_bottom = dir_fr_counter[WALL_DIR['down']] + dir_to_counter[WALL_DIR['down']]
 
   if (total_top % 2 != 0 or total_bottom % 2 != 0):
-    return False
+    return []
 
-  fr_to_array.sort(key=lambda x: x.fr)
+  # fr_to_array.sort(key=lambda x: x.fr)
 
-  return True
+  return fr_to_array
+
+
+
+def _middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
+  if len(islands) == 0:
+    return []
+  
+  WALL_DIR = _get_dir_dictionary()
+  dir_fr_counter = {key:0 for key in WALL_DIR.values()}
+  dir_to_counter = {key:0 for key in WALL_DIR.values()}
+
+  dir_couple = namedtuple('couple', ['fr', 'to'])
+  fr_to_array:list[dir_couple] = []
+
+  dir_come_from = WALL_DIR['scum']
+  dir_come_to = WALL_DIR['scum']
+
+  islands.sort(key=lambda x: x.left)
+
+  for single in islands:
+    if (single.right < (x+1) * step_x or
+        single.left  > (x)   * step_x or
+        single.down  < (y+1) * step_y or
+        single.top   > (y)   * step_y ):
+        continue
+    for i in single:
+      pass
+  return []
+
 
 if __name__ == "__main__":
   #fileName = "nameless.png"
@@ -211,10 +222,12 @@ if __name__ == "__main__":
   cv2.imshow('w', img_isl)
   cv2.waitKey(0)
 
+  cells = [[[] for x in range(count_of_col)] for y in range(count_of_ecg)]
+  
   lg.info(f"start fragment building")
   for x in x_sequence:
     for y in y_sequence:
-      bottom_line = 208
+      bottom_line = 200
       upper_line = 255
       step = 2
       for up_value in range(bottom_line,upper_line,step):
@@ -247,7 +260,9 @@ if __name__ == "__main__":
         elif x == count_of_ecg:
           one_of_works = True
         else:
-          one_of_works = middle_fragments(islandsInFragment,x,y,step_x,step_y)
+          var = middle_fragments(islandsInFragment,x,y,step_x,step_y)
+          cells[y][x] = var.copy()
+          one_of_works = len(var) > 0
         
         if one_of_works == True:
           lg.debug(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")

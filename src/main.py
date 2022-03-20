@@ -1,4 +1,6 @@
+from asyncio.windows_events import NULL
 import cProfile
+from itertools import count
 
 from pprint import pprint as pp
 from logger import lg
@@ -25,20 +27,20 @@ def _get_dir_dictionary()->dict:
 
 
 def check_from_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
-  wall_dir = _get_dir_dictionary()
-  dir_come_from = wall_dir['scum']
+  WALL_DIR = _get_dir_dictionary()
+  dir_come_from = WALL_DIR['none']
   ultraleft_lines = island.get_lines_at_index(island.left)
   
   if island.left == x*step_x:
-    dir_come_from = wall_dir['left']              # if island come from left border
+    dir_come_from = WALL_DIR['left']              # if island come from left border
   else:
     for left_line in ultraleft_lines:
       if left_line['top'] == y*step_y:               # if island come from top border
-        dir_come_from = wall_dir['top']
+        dir_come_from = WALL_DIR['top']
       elif left_line['down'] == (y+1)*step_y:    # if island come from down border
-        dir_come_from = wall_dir['down']
+        dir_come_from = WALL_DIR['down']
       else:                                       # if island - scum GAGAGA
-        dir_come_from = wall_dir['scum']
+        dir_come_from = WALL_DIR['scum']
   
   return dir_come_from
 
@@ -46,7 +48,7 @@ def check_from_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
 
 def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
   WALL_DIR = _get_dir_dictionary()
-  dir_come_to = WALL_DIR['scum']
+  dir_come_to = WALL_DIR['none']
 
   if island.right >= (x+1)*step_x -1:
     return WALL_DIR['right']
@@ -54,7 +56,7 @@ def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
   mid = island.left + (island.right - island.left)/2
   check_index = island.right
 
-  while check_index > mid and dir_come_to != WALL_DIR['none']:
+  while check_index > mid and dir_come_to == WALL_DIR['none']:
     for right_line in island.get_lines_at_index(check_index):
       if right_line['top'] == y*step_y:
         dir_come_to = WALL_DIR['top']
@@ -109,7 +111,7 @@ def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_
 
 def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
   if len(islands) == 0:
-    return False
+    return []
   
   WALL_DIR = _get_dir_dictionary()
   dir_fr_counter = {key:0 for key in WALL_DIR.values()}
@@ -118,7 +120,7 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   dir_couple = namedtuple('couple', ['fr', 'to'])
   fr_to_array:list[dir_couple] = []
 
-  success = True
+
   dir_come_from = WALL_DIR['scum']
   dir_come_to = WALL_DIR['scum']
 
@@ -147,27 +149,28 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   x = 10
 
   if all([i.fr==WALL_DIR['scum'] for i in fr_to_array]):
-    return False
+    return []
 
   if all([i.to==WALL_DIR['scum'] for i in fr_to_array if i.fr == WALL_DIR['left']]):
-    return False
+    return []
   
-  if all([i.fr==WALL_DIR['scum'] for i in fr_to_array if i.to == WALL_DIR['right']]):
-    return False
+  if all([i.fr==WALL_DIR['scum'] and i.to == WALL_DIR['right'] for i in fr_to_array]):
+    return []
 
   total_top = dir_fr_counter[WALL_DIR['top']] + dir_to_counter[WALL_DIR['top']]
   total_bottom = dir_fr_counter[WALL_DIR['down']] + dir_to_counter[WALL_DIR['down']]
 
   if (total_top % 2 != 0 or total_bottom % 2 != 0):
-    return False
+    return []
 
   fr_to_array.sort(key=lambda x: x.fr)
 
-  return True
+  return fr_to_array
 
 if __name__ == "__main__":
+  
   #fileName = "nameless.png"
-  fileName = "test1.png"
+  fileName = "test4.png"
 
   img:ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
   img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
@@ -181,6 +184,11 @@ if __name__ == "__main__":
   count_of_ecg = 4
   count_of_col = 5
   #-----------------
+
+  ecg_cells = []
+
+  for i in range(count_of_ecg):
+    ecg_cells.append([0]*count_of_col)
 
   step_x = img.shape[1] // count_of_col
   step_y = img.shape[0] // count_of_ecg
@@ -241,14 +249,36 @@ if __name__ == "__main__":
         cv2.waitKey(10)
         #------------------------------------------------------
 
+        one_cell = []
+
         if x == 0:
           one_of_works = True
           # one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
         elif x == count_of_ecg:
           one_of_works = True
         else:
-          one_of_works = middle_fragments(islandsInFragment,x,y,step_x,step_y)
+          one_cell = middle_fragments(islandsInFragment,x,y,step_x,step_y)
+          one_of_works = len(one_cell) > 0
+          ecg_cells[y][x] = one_cell.copy()
         
+        fr_to_coincidences = 0
+        fr_to_need = 0
+        
+        if y > 0:
+          for i in ecg_cells[y-1][x]:
+            if (i.fr == i.to == 1):
+              fr_to_coincidences+=1
+          
+          if fr_to_coincidences > 0:
+            for j in ecg_cells[y][x]:
+              if (j.fr == j.to == 2):
+                fr_to_need+=1
+          
+          if fr_to_need != fr_to_coincidences:
+            one_of_works = False
+
+
+
         if one_of_works == True:
           lg.debug(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
           fragmentsWithIslands[x].append(islandsInFragment.copy())

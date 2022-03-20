@@ -1,95 +1,59 @@
-from collections import deque
-from pprint import pprint as pp
-from copy import deepcopy
-import timeit
-from cv2 import imwrite
+import cProfile
 
+from pprint import pprint as pp
 from logger import lg
+from logger import lg, initLogger
 
 from numpy import ndarray
 from analisis.loader.img_analizer import *
 from analisis.loader.mask_loader import *
-from analisis.loader.islands import islands_from_lines
+from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate
 from drawing.draw import *
 from drawing.show import *
-from constant.paths import PATH_TO_IMAGES, PATH_TO_INPUT_JPG, \
-                  PATH_TO_INPUT_, \
-                  PATH_TO_ISLANDS_JPG,  \
-                  PATH_TO_MASK_JPG, \
-                  PATH_TO_MASK_, \
-                  PATH_TO_OUTPUT_
-import cProfile
-import pickle
-import timeit
-from analisis.classes.classes import Line, Island, line_np_type
+from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
+from collections import namedtuple
+from main import first_column_fragments, middle_fragments
 
-# lg.info("palyground start")
-# file = "input.jpg"
-file = "test5.png"
-img:ndarray     = cv2.imread(PATH_TO_INPUT_ + file, cv2.IMREAD_COLOR)
+fileName = "test11.png"
 
-# img = get_mask_from_gray(img, upper_val=100)
-# lg.info(f"load image {img.shape}")
+img:ndarray          = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
+img_clr:ndarray      = cv2.imread(PATH_TO_INPUT_ + fileName)
+img_isl:np.ndarray   = img_clr.copy()
 
-# # lines_arr = get_lines(get_mask_from_gray(img).copy())
-# # complete = islands_from_lines(lines_arr)
-# # lg.info(f"get islands {len(complete)}")
+count_of_ecg = 4
+count_of_col = 5
 
-# # with open("test.dt", mode="wb") as f:
-# #   pickle.dump(complete, f, protocol=pickle.HIGHEST_PROTOCOL)
+step_x = img.shape[1] // count_of_col
+step_y = img.shape[0] // count_of_ecg
 
-# with open("test.dt", mode="rb") as f:
-#   complete = pickle.load(f)
+x=3
+y=0
+bottom_line = 200
+upper_line = 255
+step = 2
 
-# isl = draw_islands(complete, cv2.cvtColor(img, cv2.COLOR_GRAY2BGR))
+for up_value in range(bottom_line,upper_line,step):
+  mask_inv = get_mask_from_gray(img, upper_val=up_value)      
+  islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
+  one_of_works = False
+  #------------------------------------------------------
+  img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
+  img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
+  img_isl = draw_islands(islandsInFragment, img_isl)
+  lg.info(f"{up_value}, {len(islandsInFragment)}")
+  cv2.imshow('w', img_isl)
+  cv2.waitKey(10)
+  #------------------------------------------------------
 
-# with open("test1.bin", mode="wb") as f:
-#     pickle.dump({}, f, protocol=pickle.HIGHEST_PROTOCOL)
-# with open("test2.bin", mode="wb") as f:
-#     pickle.dump({}, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-def test_add(isl1:Island, isl2:Island):
-  isl1 = isl1 + isl2
-  pass
-def test_get_lines(isl:Island, lst):
-  for i in lst:
-    isl.get_lines_at_index(i)
-
-def test_pop(isl:list):
-  while len(isl) > 0:
-    isl.pop()
-
-def test_extend(isl:list, isl2:list):
-  isl.extend(isl2)
-
-isl = Island()
-isl2 = Island()
-
-cnt = 1000
-l = np.empty(cnt, dtype=line_np_type)
-l['index'] = np.random.randint(0,100, cnt)
-l['top'] = np.random.randint(0,100, cnt)
-l['down'] = np.random.randint(0,100, cnt)
-isl += l
-
-cnt = 10
-l = np.empty(cnt, dtype=line_np_type)
-l['index'] = np.random.randint(0,100, cnt)
-l['top'] = np.random.randint(0,100, cnt)
-l['down'] = np.random.randint(0,100, cnt)
-isl2 += l
-
-isl = [i for i in range(cnt) ]
-isl2 = [i for i in range(cnt) ]
-# with open("", 'w') as f:
-# isl2 = np.arange(0, cnt, 1)
-
-setup="""
-from __main__ import test_extend, isl, isl2
-"""
-
-tm = timeit.repeat('test_extend(isl, isl2)', setup=setup, repeat=1_000, number=10_000)
-print(np.average(tm))
-# imwrite(PATH_TO_OUTPUT_ + "islands.png", isl)
-# lg.info(f"fin")
+  if x == 0:
+    one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
+  elif x == count_of_ecg:
+    one_of_works = True
+  else:
+    one_of_works = middle_fragments(islandsInFragment,x,y,step_x,step_y)
+  
+  cv2.imwrite(PATH_TO_OUTPUT_ + f"{up_value}.png", img_isl)
+  if one_of_works == True:
+    cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}_{up_value}.png", img_isl)
+    break

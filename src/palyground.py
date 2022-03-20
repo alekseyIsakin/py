@@ -18,7 +18,7 @@ import cProfile
 import pickle
 import timeit
 from analisis.classes.classes import Line, Island, dtype_line
-
+from collections import namedtuple
 # lg.info("palyground start")
 # file = "input.jpg"
 file = "test5.png"
@@ -90,20 +90,8 @@ img:ndarray     = cv2.imread(PATH_TO_INPUT_ + file, cv2.IMREAD_COLOR)
 # # imwrite(PATH_TO_OUTPUT_ + "islands.png", isl)
 # # lg.info(f"fin")
 
-sequence = [i for i in range(10)]
-x_sequence = []
+dir_couple = namedtuple('couple', ['fr', 'to'])
 
-mid = len(sequence) // 2
-x_sequence.append(mid)
-l1, l2 = mid, mid
+t = dir_couple(to=1,fr=2)
 
-while l1 > 0 and l2 < len(sequence):
-  if l1 > 0: 
-    l1 -= 1
-    x_sequence.append(l1)
-  if l2 < len(sequence)-1: 
-    l2 += 1
-    x_sequence.append(l2)
-
-print(sequence)
-print(x_sequence)
+print (t.fr)

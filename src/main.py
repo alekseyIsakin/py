@@ -208,10 +208,13 @@ if __name__ == "__main__":
       l2 += 1
       x_sequence.append(l2)
 
+  cv2.imshow('w', img_isl)
+  cv2.waitKey(0)
+
   lg.info(f"start fragment building")
   for x in x_sequence:
     for y in y_sequence:
-      bottom_line = 212
+      bottom_line = 208
       upper_line = 255
       step = 2
       for up_value in range(bottom_line,upper_line,step):
@@ -239,7 +242,8 @@ if __name__ == "__main__":
         #------------------------------------------------------
 
         if x == 0:
-          one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
+          one_of_works = True
+          # one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
         elif x == count_of_ecg:
           one_of_works = True
         else:

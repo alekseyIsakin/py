@@ -20,7 +20,7 @@ lg.info("Start")
 
 
 def _get_dir_dictionary()->dict:
-  return {'left': 0, 'down':1, 'top': 2, 'right':3, 'scum':4}
+  return {'left': 0, 'down':1, 'top': 2, 'right':3, 'scum':4, 'none':5}
 
 
 
@@ -45,39 +45,25 @@ def check_from_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
 
 
 def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
-  wall_dir = _get_dir_dictionary()
-  dir_come_to = wall_dir['scum']
+  WALL_DIR = _get_dir_dictionary()
+  dir_come_to = WALL_DIR['scum']
 
   if island.right >= (x+1)*step_x -1:
-      dir_come_to = wall_dir['right']
-  else:
-    ultraright_lines = island.get_lines_at_index(island.right)
-    for right_line in ultraright_lines:
-      if right_line['top'] == y*step_y:
-        dir_come_to = wall_dir['top']
-      elif right_line['down'] == (y+1)*step_y:
-        dir_come_to = wall_dir['down']
-      else:                                       
-        dir_come_to = wall_dir['scum']
-
-  return dir_come_to
-          
-  # WALL_DIR = _get_dir_dictionary()
-  # dir_come_to = WALL_DIR['scum']
-
-  # if island.right >= (x+1)*step_x -1:
-  #   return WALL_DIR['right']
+    return WALL_DIR['right']
   
-  # mid = island.left + (island.right - island.left)/2
-  # check_index = island.right
+  mid = island.left + (island.right - island.left)/2
+  check_index = island.right
 
-  # while check_index != mid and dir_come_to != WALL_DIR['scum']:
-  #   for right_line in island.get_lines_at_index(check_index):
-  #     if right_line['top'] == y*step_y:
-  #       dir_come_to = WALL_DIR['top']
-  #     elif right_line['down'] == (y+1)*step_y:
-  #       dir_come_to = WALL_DIR['down']
-  #   check_index -= 1
+  while check_index > mid and dir_come_to != WALL_DIR['none']:
+    for right_line in island.get_lines_at_index(check_index):
+      if right_line['top'] == y*step_y:
+        dir_come_to = WALL_DIR['top']
+        break
+      elif right_line['down'] == (y+1)*step_y:
+        dir_come_to = WALL_DIR['down']
+        break
+    check_index -= 1
+  return dir_come_to
 
 def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
   wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
@@ -177,109 +163,109 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
 
   fr_to_array.sort(key=lambda x: x.fr)
 
-
   return True
 
-#fileName = "nameless.png"
-fileName = "test1.png"
+if __name__ == "__main__":
+  #fileName = "nameless.png"
+  fileName = "test1.png"
 
-img:ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
-img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
+  img:ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
+  img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
 
-lg.info(f"load image '{fileName}'")
-lg.debug(f"resolution '{fileName}' is {img.shape}")
-fragmentsWithIslands:list[list[list[Island]]] = []
+  lg.info(f"load image '{fileName}'")
+  lg.debug(f"resolution '{fileName}' is {img.shape}")
+  fragmentsWithIslands:list[list[list[Island]]] = []
 
-#-----------------
-# Это база!
-count_of_ecg = 4
-count_of_col = 5
-#-----------------
+  #-----------------
+  # Это база!
+  count_of_ecg = 4
+  count_of_col = 5
+  #-----------------
 
-step_x = img.shape[1] // count_of_col
-step_y = img.shape[0] // count_of_ecg
-lg.debug(f"step_x [{step_x}], step_y [{step_y}] ")
+  step_x = img.shape[1] // count_of_col
+  step_y = img.shape[0] // count_of_ecg
+  lg.debug(f"step_x [{step_x}], step_y [{step_y}] ")
 
-mask_inv = get_mask_from_gray(img, upper_val=100)
-img_isl        :np.ndarray   = img_clr.copy()
+  mask_inv = get_mask_from_gray(img, upper_val=100)
+  img_isl        :np.ndarray   = img_clr.copy()
 
-black_saturation = [[0 for y in range(img.shape[1] // step_x)] for x in range(img.shape[1] // step_x)]
+  black_saturation = [[0 for y in range(img.shape[1] // step_x)] for x in range(img.shape[1] // step_x)]
 
-fragmentsWithIslands = [[] for x in range(img.shape[1] // step_x)]
-sequence = [x for x in range(img.shape[1] // step_x)]
-y_sequence = [y for y in range(img.shape[0] // step_y)]
-x_sequence = []
+  fragmentsWithIslands = [[] for x in range(img.shape[1] // step_x)]
+  sequence = [x for x in range(img.shape[1] // step_x)]
+  y_sequence = [y for y in range(img.shape[0] // step_y)]
+  x_sequence = []
 
-mid = len(sequence) // 2
-x_sequence.append(mid)
-l1, l2 = mid, mid
+  mid = len(sequence) // 2
+  x_sequence.append(mid)
+  l1, l2 = mid, mid
 
-while l1 > 0 and l2 < len(sequence):
-  if l1 > 0: 
-    l1 -= 1
-    x_sequence.append(l1)
-  if l2 < len(sequence)-1: 
-    l2 += 1
-    x_sequence.append(l2)
+  while l1 > 0 and l2 < len(sequence):
+    if l1 > 0: 
+      l1 -= 1
+      x_sequence.append(l1)
+    if l2 < len(sequence)-1: 
+      l2 += 1
+      x_sequence.append(l2)
 
-lg.info(f"start fragment building")
-for x in x_sequence:
-  for y in y_sequence:
-    bottom_line = 212
-    upper_line = 255
-    step = 2
-    for up_value in range(bottom_line,upper_line,step):
-      lg.debug(f">> step [{x}|{y}][{up_value}]")
-      mask_inv = get_mask_from_gray(img, upper_val=up_value)      
-      islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
+  lg.info(f"start fragment building")
+  for x in x_sequence:
+    for y in y_sequence:
+      bottom_line = 212
+      upper_line = 255
+      step = 2
+      for up_value in range(bottom_line,upper_line,step):
+        lg.debug(f">> step [{x}|{y}][{up_value}]")
 
-      # i=0
-      # while i != len(islandsInFragment):
-      #   if len(islandsInFragment[i]) <= 3 or islandsInFragment[i].down - islandsInFragment[i].top <= 2:
-      #     del islandsInFragment[i]
-      #   else:
-      #     i+=1
+        mask_inv = get_mask_from_gray(img, upper_val=up_value)      
+        islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
-      one_of_works = False
+        i=0
+        while i != len(islandsInFragment):
+          if len(islandsInFragment[i]) <= 3 and islandsInFragment[i].down - islandsInFragment[i].top <= 2:
+            del islandsInFragment[i]
+          else:
+            i+=1
 
-      print(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
-      #------------------------------------------------------
-      img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
-      img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
-      img_isl = draw_islands(islandsInFragment, img_isl)
-      lg.info(f"{up_value}, {len(islandsInFragment)}")
-      fragmentsWithIslands[x].append(islandsInFragment.copy())
-      black_saturation[x][y] = up_value
-      cv2.imshow('w', img_isl)
-      cv2.waitKey(10)
-      #------------------------------------------------------
+        one_of_works = False
 
-      if x == 0:
-        one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
-      elif x == count_of_ecg:
-        one_of_works = True
-      else:
-        one_of_works = middle_fragments(islandsInFragment,x,y,step_x,step_y)
-      
-      if one_of_works == True:
-        cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}.png", img_isl)
-        break
+        #------------------------------------------------------
+        img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
+        img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
+        img_isl = draw_islands(islandsInFragment, img_isl)
+        black_saturation[x][y] = up_value
+        cv2.imshow('w', img_isl)
+        cv2.waitKey(10)
+        #------------------------------------------------------
 
-      
+        if x == 0:
+          one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
+        elif x == count_of_ecg:
+          one_of_works = True
+        else:
+          one_of_works = middle_fragments(islandsInFragment,x,y,step_x,step_y)
+        
+        if one_of_works == True:
+          lg.debug(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
+          fragmentsWithIslands[x].append(islandsInFragment.copy())
+          cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}.png", img_isl)
+          break
 
-cv2.imwrite(PATH_TO_OUTPUT_ + "islands1.png", img_isl)
+        
+
+  cv2.imwrite(PATH_TO_OUTPUT_ + "islands1.png", img_isl)
 
 
-img_isl     :np.ndarray   = np.full_like(img_clr, 255)
-complete_isl:list[Island] = build_islands_from_fragmets(fragmentsWithIslands, step_x, step_y)
+  img_isl     :np.ndarray   = np.full_like(img_clr, 255)
+  complete_isl:list[Island] = build_islands_from_fragmets(fragmentsWithIslands, step_x, step_y)
 
-for isl in complete_isl:
-  isl.solidify()
+  for isl in complete_isl:
+    isl.solidify()
 
-complete_isl = sorted(complete_isl, key=len)
+  complete_isl = sorted(complete_isl, key=len)
 
-img_isl = draw_islands(complete_isl, img_isl)
+  img_isl = draw_islands(complete_isl, img_isl)
 
-cv2.imwrite(PATH_TO_OUTPUT_ + "FinalCut.png",img_isl)
+  cv2.imwrite(PATH_TO_OUTPUT_ + "FinalCut.png",img_isl)
 
-lg.info("fin")
+  lg.info("fin")

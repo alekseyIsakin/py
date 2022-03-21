@@ -128,13 +128,16 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   if len(fr_to_array) == 0:
     return []
 
+  t1 = [i.fr==WALL_DIR['scum'] for i in fr_to_array]
   if all([i.fr==WALL_DIR['scum'] for i in fr_to_array]):
     return []
 
-  if all([i.fr == WALL_DIR['left'] and i.to==WALL_DIR['scum'] for i in fr_to_array]):
+  t2 = [i.to==WALL_DIR['scum'] for i in fr_to_array if i.fr == WALL_DIR['left']]
+  if all([i.to==WALL_DIR['scum'] for i in fr_to_array if i.fr == WALL_DIR['left'] ]):
     return []
   
-  if all([i.fr==WALL_DIR['scum'] and i.to == WALL_DIR['right'] for i in fr_to_array]):
+  t3 = [i.fr==WALL_DIR['scum'] for i in fr_to_array if i.to == WALL_DIR['right']]
+  if all([i.fr==WALL_DIR['scum'] for i in fr_to_array if i.to == WALL_DIR['right']]):
     return []
 
   total_top = dir_fr_counter[WALL_DIR['top']] + dir_to_counter[WALL_DIR['top']]
@@ -147,33 +150,6 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
 
   return fr_to_array
 
-
-
-def _middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
-  if len(islands) == 0:
-    return []
-  
-  WALL_DIR = _get_dir_dictionary()
-  dir_fr_counter = {key:0 for key in WALL_DIR.values()}
-  dir_to_counter = {key:0 for key in WALL_DIR.values()}
-
-  dir_couple = namedtuple('couple', ['fr', 'to'])
-  fr_to_array:list[dir_couple] = []
-
-  dir_come_from = WALL_DIR['scum']
-  dir_come_to = WALL_DIR['scum']
-
-  islands.sort(key=lambda x: x.left)
-
-  for single in islands:
-    if (single.right < (x+1) * step_x or
-        single.left  > (x)   * step_x or
-        single.down  < (y+1) * step_y or
-        single.top   > (y)   * step_y ):
-        continue
-    for i in single:
-      pass
-  return []
 
 
 if __name__ == "__main__":

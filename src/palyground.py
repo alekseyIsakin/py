@@ -12,7 +12,7 @@ from drawing.draw import *
 from drawing.show import *
 from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
 from collections import namedtuple
-from main import middle_fragments
+from main import middle_fragments, _get_dir_dictionary
 
 fileName = "test1.png"
 
@@ -26,12 +26,18 @@ count_of_col = 5
 step_x = img.shape[1] // count_of_col
 step_y = img.shape[0] // count_of_ecg
 
-x_sequence = [2]
-y_sequence = [2, 3]
+x_sequence = [3]
+y_sequence = [2,3]
 
 bottom_line = 200
 upper_line = 255
-step = 2
+step = 1
+
+ecg_cells = []
+WALL_DIR = _get_dir_dictionary()
+
+for i in range(count_of_ecg):
+  ecg_cells.append([[]]*count_of_col)
 
 for x in x_sequence:
   for y in y_sequence:
@@ -55,17 +61,47 @@ for x in x_sequence:
       cv2.imshow('w', img_isl)
       cv2.waitKey(10)
       #------------------------------------------------------
-      var = []
+
+      one_cell = []
+
       if x == 0:
         one_of_works = True
+        # one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
       elif x == count_of_ecg:
         one_of_works = True
       else:
-        var = middle_fragments(islandsInFragment,x,y,step_x,step_y)
-        one_of_works = len(var) > 0
+        one_cell = middle_fragments(islandsInFragment,x,y,step_x,step_y)
+        one_of_works = len(one_cell) > 0
+        ecg_cells[y][x] = one_cell.copy()
       
-      cv2.imwrite(PATH_TO_OUTPUT_ + f"{up_value}.png", img_isl)
+      if len(ecg_cells[y][x]) == 0:
+        continue
+
+      fr_upper_cell = 0
+      to_upper_cell = 0
+      fr_cur_cell = 0
+      to_cur_cell = 0
+      
+      if y > 0:
+        for direct in ecg_cells[y-1][x]:
+          if direct.fr == WALL_DIR['down']:
+            fr_upper_cell+=1
+
+          if direct.to == WALL_DIR['down']:
+            to_upper_cell+=1
+        
+        if fr_upper_cell + to_upper_cell > 0:
+          for direct in ecg_cells[y][x]:
+            if direct.fr == WALL_DIR['top'] and direct.to != WALL_DIR['scum']: 
+              fr_cur_cell+=1
+            if direct.to == WALL_DIR['top'] and direct.fr != WALL_DIR['scum']:
+              to_cur_cell+=1
+        
+        if fr_cur_cell != to_upper_cell or to_cur_cell != fr_upper_cell:
+          one_of_works = False
+      
+      # cv2.imwrite(PATH_TO_OUTPUT_ + f"{up_value}.png", img_isl)
       if one_of_works == True:
-        pp(sorted(var, key=lambda x: x.fr))
+        pp(sorted(one_cell, key=lambda x: x.fr))
         cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}_{up_value}.png", img_isl)
         break

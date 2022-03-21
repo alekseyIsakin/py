@@ -16,7 +16,6 @@ from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
 from collections import namedtuple
 
 initLogger(lg.DEBUG)
-
 lg.info("Start")
 
 
@@ -29,19 +28,25 @@ def _get_dir_dictionary()->dict:
 def check_from_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
   WALL_DIR = _get_dir_dictionary()
   dir_come_from = WALL_DIR['none']
-  ultraleft_lines = island.get_lines_at_index(island.left)
+  ultraleft_lines = island.get_lines_at_index
   
+  mid = island.left + island.width//2
+  check_index = island.left
+
   if island.left == x*step_x:
-    dir_come_from = WALL_DIR['left']              # if island come from left border
-  else:
-    for left_line in ultraleft_lines:
-      if left_line['top'] == y*step_y:               # if island come from top border
+    return WALL_DIR['left']      
+      
+  while check_index <= mid and dir_come_from == WALL_DIR['none']:
+    for left_line in ultraleft_lines(check_index):
+      if left_line['top'] == y*step_y:
         dir_come_from = WALL_DIR['top']
-      elif left_line['down'] == (y+1)*step_y:    # if island come from down border
+      elif left_line['down'] == (y+1)*step_y:
         dir_come_from = WALL_DIR['down']
-      else:                                       # if island - scum GAGAGA
-        dir_come_from = WALL_DIR['scum']
-  
+    check_index += 1
+      
+  if dir_come_from == WALL_DIR['none']:
+    dir_come_from = WALL_DIR['scum']
+
   return dir_come_from
 
 
@@ -49,15 +54,16 @@ def check_from_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
 def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
   WALL_DIR = _get_dir_dictionary()
   dir_come_to = WALL_DIR['none']
+  ultraright_lines = island.get_lines_at_index
 
-  if island.right >= (x+1)*step_x -1:
+  if island.right == (x+1)*step_x:
     return WALL_DIR['right']
   
-  mid = island.left + (island.right - island.left)/2
+  mid = island.left + island.width//2
   check_index = island.right
 
   while check_index > mid and dir_come_to == WALL_DIR['none']:
-    for right_line in island.get_lines_at_index(check_index):
+    for right_line in ultraright_lines(check_index):
       if right_line['top'] == y*step_y:
         dir_come_to = WALL_DIR['top']
         break
@@ -65,7 +71,12 @@ def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
         dir_come_to = WALL_DIR['down']
         break
     check_index -= 1
+      
+  if dir_come_to == WALL_DIR['none']:
+    dir_come_to = WALL_DIR['scum']
   return dir_come_to
+
+
 
 def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
   wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
@@ -124,7 +135,6 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   dir_come_from = WALL_DIR['scum']
   dir_come_to = WALL_DIR['scum']
 
-  # islands.sort(key=lambda x: (x.right - x.left), reverse=True)            #don't touch nahui!
   islands.sort(key=lambda x: x.left)
 
   for single in islands:
@@ -132,14 +142,6 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
     dir_come_to = WALL_DIR['scum']
 
     dir_come_from = check_from_dir(single,x,y,step_x,step_y)
-
-    if dir_come_from == WALL_DIR['scum'] or (dir_come_from != dir_come_to and dir_come_to != WALL_DIR['scum']):
-      fr_to_array.append (
-        dir_couple(fr=dir_come_from, to=dir_come_to))
-      dir_fr_counter[dir_come_from] += 1
-      dir_to_counter[dir_come_to] += 1
-      continue
-
     dir_come_to = check_to_dir(single,x,y,step_x,step_y)
 
     fr_to_array.append (
@@ -154,7 +156,7 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   if all([i.to==WALL_DIR['scum'] for i in fr_to_array if i.fr == WALL_DIR['left']]):
     return []
   
-  if all([i.fr==WALL_DIR['scum'] and i.to == WALL_DIR['right'] for i in fr_to_array]):
+  if all([i.fr==WALL_DIR['scum'] for i in fr_to_array if i.to == WALL_DIR['right']]):
     return []
 
   total_top = dir_fr_counter[WALL_DIR['top']] + dir_to_counter[WALL_DIR['top']]
@@ -166,6 +168,14 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   fr_to_array.sort(key=lambda x: x.fr)
 
   return fr_to_array
+
+
+
+#|ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ|
+#|ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ|
+#|ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ|
+
+
 
 if __name__ == "__main__":
   
@@ -180,7 +190,6 @@ if __name__ == "__main__":
   fragmentsWithIslands:list[list[list[Island]]] = []
 
   #-----------------
-  # Это база!
   count_of_ecg = 4
   count_of_col = 5
   #-----------------
@@ -194,13 +203,12 @@ if __name__ == "__main__":
   step_y = img.shape[0] // count_of_ecg
   lg.debug(f"step_x [{step_x}], step_y [{step_y}] ")
 
-  mask_inv = get_mask_from_gray(img, upper_val=100)
-  img_isl        :np.ndarray   = img_clr.copy()
-
-  black_saturation = [[0 for y in range(img.shape[1] // step_x)] for x in range(img.shape[1] // step_x)]
+  mask_inv             = get_mask_from_gray(img, upper_val=100)
+  img_isl:np.ndarray   = img_clr.copy()
+  WALL_DIR = _get_dir_dictionary()
 
   fragmentsWithIslands = [[] for x in range(img.shape[1] // step_x)]
-  sequence = [x for x in range(img.shape[1] // step_x)]
+  sequence   = [x for x in range(img.shape[1] // step_x)]
   y_sequence = [y for y in range(img.shape[0] // step_y)]
   x_sequence = []
 
@@ -217,14 +225,14 @@ if __name__ == "__main__":
       x_sequence.append(l2)
 
   cv2.imshow('w', img_isl)
-  cv2.waitKey(0)
+  cv2.waitKey(10)
 
   lg.info(f"start fragment building")
   for x in x_sequence:
     for y in y_sequence:
-      bottom_line = 208
+      bottom_line = 150
       upper_line = 255
-      step = 2
+      step = 3
       for up_value in range(bottom_line,upper_line,step):
         lg.debug(f">> step [{x}|{y}][{up_value}]")
 
@@ -233,22 +241,21 @@ if __name__ == "__main__":
 
         i=0
         while i != len(islandsInFragment):
-          if len(islandsInFragment[i]) <= 3 and islandsInFragment[i].down - islandsInFragment[i].top <= 2:
+          if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
             del islandsInFragment[i]
           else:
             i+=1
 
-        one_of_works = False
 
         #------------------------------------------------------
         img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
         img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
         img_isl = draw_islands(islandsInFragment, img_isl)
-        black_saturation[x][y] = up_value
         cv2.imshow('w', img_isl)
         cv2.waitKey(10)
         #------------------------------------------------------
 
+        one_of_works = False
         one_cell = []
 
         if x == 0:
@@ -259,29 +266,38 @@ if __name__ == "__main__":
         else:
           one_cell = middle_fragments(islandsInFragment,x,y,step_x,step_y)
           one_of_works = len(one_cell) > 0
-          ecg_cells[y][x] = one_cell.copy()
         
-        fr_to_coincidences = 0
-        fr_to_need = 0
+
+        fr_upper_cell = 0
+        to_upper_cell = 0
+        fr_cur_cell = 0
+        to_cur_cell = 0
         
         if y > 0:
-          for i in ecg_cells[y-1][x]:
-            if (i.fr == i.to == 1):
-              fr_to_coincidences+=1
-          
-          if fr_to_coincidences > 0:
-            for j in ecg_cells[y][x]:
-              if (j.fr == j.to == 2):
-                fr_to_need+=1
-          
-          if fr_to_need != fr_to_coincidences:
-            one_of_works = False
+          for direct in ecg_cells[y-1][x]:
+            if direct.fr == WALL_DIR['down']:
+              fr_upper_cell+=1
 
+            if direct.to == WALL_DIR['down']:
+              to_upper_cell+=1
+          
+          if fr_upper_cell + to_upper_cell > 0:
+            for direct in one_cell:
+              if direct.fr == WALL_DIR['top'] and direct.to != WALL_DIR['scum']: 
+                fr_cur_cell+=1
+              if direct.to == WALL_DIR['top'] and direct.fr != WALL_DIR['scum']:
+                to_cur_cell+=1
+          
+          if fr_cur_cell != to_upper_cell or to_cur_cell != fr_upper_cell:
+            one_of_works = False
 
 
         if one_of_works == True:
           lg.debug(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
+
+          ecg_cells[y][x] = one_cell.copy()
           fragmentsWithIslands[x].append(islandsInFragment.copy())
+
           cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}.png", img_isl)
           break
 

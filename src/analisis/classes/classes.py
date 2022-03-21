@@ -48,6 +48,8 @@ class Island():
     self.left = 0
     self.down = 0
     self.right = 0
+    self.width = 0
+    self.height = 0
     self.line_x_pos = { }
     self.lines_at_down = set()
     self.lines_at_top  = set()
@@ -127,6 +129,8 @@ class Island():
     self.left = (np.min(tmp['index']))     # topX
     self.down = (np.max(tmp['down']))      # downY
     self.right = (np.max(tmp['index']))     # downX
+    self.width = self.right - self.left + 1
+    self.height = self.down - self.top + 1
 
     self.lines = np.sort(tmp)
     key = 0

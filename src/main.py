@@ -79,26 +79,27 @@ def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
 
 
 def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
+  
+  if len(islands) == 0:
+    return False
+
   wall_dir = {'left': 0, 'top': 1, 'right':2, 'down':3, 'scum':4}
   success = False
   dir_come_from = wall_dir['scum']
   dir_come_to = wall_dir['scum']
-  first_island = True
+  #first_island = True
 
-  if len(islands) == 0:
-    return False
-
-  #islands.sort(key=lambda x: (x.right - x.left), reverse=True)
+  islands.sort(key=lambda x: (x.right - x.left), reverse=True)
   #if len(islands[0]) >= step_x and islands[0].left == x*step_x and islands[0].right == (x+1)*step_x:
   #  return True
 
-  islands.sort(key=lambda x: x.left)
+  #islands.sort(key=lambda x: x.right)
 
   for single in islands:
     
     dir_come_from = check_from_dir(single,x,y,step_x,step_y)
 
-    if (dir_come_from == wall_dir['scum'] and first_island == False) or (dir_come_from != dir_come_to and dir_come_to != wall_dir['scum']):
+    if (dir_come_from == wall_dir['scum']) or (dir_come_from != dir_come_to and dir_come_to != wall_dir['scum']):
       success = False
       continue
 
@@ -113,7 +114,7 @@ def first_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_
     if dir_come_to == wall_dir['scum']:
       dir_come_from = wall_dir['scum']
     else:
-      first_island = False
+      #first_island = False
       success = True
 
   return success  
@@ -180,7 +181,7 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
 if __name__ == "__main__":
   
   #fileName = "nameless.png"
-  fileName = "test4.png"
+  fileName = "test1.png"
 
   img:ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
   img_clr:ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
@@ -195,9 +196,13 @@ if __name__ == "__main__":
   #-----------------
 
   ecg_cells = []
+  cells_saturation = []
+  index = 0
+  sredn_arifm = 0
 
   for i in range(count_of_ecg):
     ecg_cells.append([0]*count_of_col)
+    cells_saturation.append([0]*count_of_col)
 
   step_x = img.shape[1] // count_of_col
   step_y = img.shape[0] // count_of_ecg
@@ -234,6 +239,10 @@ if __name__ == "__main__":
       upper_line = 255
       step = 3
       for up_value in range(bottom_line,upper_line,step):
+        
+        if x == 0 or x == count_of_ecg:
+          up_value = round(sredn_arifm)
+
         lg.debug(f">> step [{x}|{y}][{up_value}]")
 
         mask_inv = get_mask_from_gray(img, upper_val=up_value)      
@@ -245,7 +254,6 @@ if __name__ == "__main__":
             del islandsInFragment[i]
           else:
             i+=1
-
 
         #------------------------------------------------------
         img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
@@ -260,20 +268,20 @@ if __name__ == "__main__":
 
         if x == 0:
           one_of_works = True
-          # one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
+          #one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
         elif x == count_of_ecg:
           one_of_works = True
         else:
           one_cell = middle_fragments(islandsInFragment,x,y,step_x,step_y)
           one_of_works = len(one_cell) > 0
-        
 
         fr_upper_cell = 0
         to_upper_cell = 0
         fr_cur_cell = 0
         to_cur_cell = 0
         
-        if y > 0:
+        # did't work
+        if y > 0 and y < 3:
           for direct in ecg_cells[y-1][x]:
             if direct.fr == WALL_DIR['down']:
               fr_upper_cell+=1
@@ -296,6 +304,15 @@ if __name__ == "__main__":
           lg.debug(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
 
           ecg_cells[y][x] = one_cell.copy()
+          cells_saturation[y][x] = up_value
+
+          if index < (count_of_ecg * (count_of_col-2)):
+            sredn_arifm += up_value
+            index += 1
+          if index == (count_of_ecg * (count_of_col-2)):
+            index = (count_of_ecg * count_of_col)
+            sredn_arifm /= (count_of_ecg * (count_of_col-2))
+
           fragmentsWithIslands[x].append(islandsInFragment.copy())
 
           cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}.png", img_isl)

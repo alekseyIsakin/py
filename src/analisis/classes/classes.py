@@ -1,9 +1,9 @@
-from cmath import inf
+from collections import namedtuple
 import numpy as np
 
-
-def get_line_dtype() -> np.dtype:
-  return np.dtype([('index', np.int32),('top', np.int32),('down', np.int32)])
+from cmath import inf
+from constant.other import _get_line_dtype, _get_fragment_dir_tuple
+  
 
 class Line():
   def __init__(self, index, top, down) -> None:
@@ -52,14 +52,40 @@ class Island():
     self.lines_at_down = []
     self.lines_at_top  = []
     self._line_dict_step = 25
-    self.lines = np.empty(0, dtype=get_line_dtype())
+    self.lines = np.empty(0, dtype=_get_line_dtype())
     pass
+
 
   def __getitem__(self, key) -> Line:
     return self.lines[key]
   
+
   def __len__(self) -> int:
     return len(self.lines)
+
+
+  def __add__(self, other):
+    tmp =  np.concatenate((self.lines, other))
+
+    self.top = (np.min(tmp['top']))       # topY
+    self.left = (np.min(tmp['index']))     # topX
+    self.down = (np.max(tmp['down']))      # downY
+    self.right = (np.max(tmp['index']))     # downX
+    self.width = self.right - self.left + 1
+    self.height = self.down - self.top + 1
+
+    self.lines = np.sort(tmp)
+    key = 0
+
+    for i, line in enumerate(self.lines):
+      boundary = (key + 1) * self._line_dict_step
+      if line['index'] < boundary: continue
+
+      key = line['index'] // self._line_dict_step
+      self.line_x_pos[key] = i
+    
+    self.update_top_bottom_lines()
+    return self
 
 
   def get_lines_at_top(self):
@@ -96,7 +122,7 @@ class Island():
 
   def smooth(self):
     # newlines = [self.lines[0]]
-    newlines = np.empty(0, dtype=get_line_dtype())
+    newlines = np.empty(0, dtype=_get_line_dtype())
 
     newlines = np.append(newlines, self.lines[0])
 
@@ -120,34 +146,33 @@ class Island():
 
     self.lines = np.array( [l for l in self.lines if l['index'] != -1] )
     self.update_top_bottom_lines()
-    
 
-  def __add__(self, other):
-    tmp =  np.concatenate((self.lines, other))
-
-    self.top = (np.min(tmp['top']))       # topY
-    self.left = (np.min(tmp['index']))     # topX
-    self.down = (np.max(tmp['down']))      # downY
-    self.right = (np.max(tmp['index']))     # downX
-    self.width = self.right - self.left + 1
-    self.height = self.down - self.top + 1
-
-    self.lines = np.sort(tmp)
-    key = 0
-
-    for i, line in enumerate(self.lines):
-      boundary = (key + 1) * self._line_dict_step
-      if line['index'] < boundary: continue
-
-      key = line['index'] // self._line_dict_step
-      self.line_x_pos[key] = i
-    
-    self.update_top_bottom_lines()
-    return self
 
   def update_top_bottom_lines(self):
     self.lines_at_top  = [i for i, l in enumerate(self.lines['top'])  if l == self.top]
     self.lines_at_down = [i for i, l in enumerate(self.lines['down']) if l == self.down]
 
+  
   def __repr__(self):
     return f"<Island. Top: [{self.left}, {self.top}], Bottom: [{self.right}, {self.down}]>"
+
+
+
+class Fragment_info:
+  def __init__(self):
+    self.fr_to_array = []
+    self.cnt_top_intersection = 0
+    self.cnt_bottom_intersection = 0
+    self.saturation = 0
+  
+
+  def __getitem__(self, key) -> tuple:
+    return self.fr_to_array[key]
+  
+
+  def __len__(self):
+    return len(self.fr_to_array)
+  
+  # def copy(self):
+  #   new_fragment
+  #   pass

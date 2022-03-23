@@ -1,14 +1,15 @@
 import cProfile
 
 from pprint import pprint as pp
+from analisis.classes.classes import Fragment_info
 from logger import lg
 from logger import lg, initLogger
 
 from numpy import ndarray
-from analisis.classes.classes import get_line_dtype
 from analisis.loader.img_analizer import *
 from analisis.loader.mask_loader import *
 from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate
+from constant.other import _get_line_dtype
 from drawing.draw import *
 from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
 from collections import namedtuple
@@ -36,7 +37,7 @@ from main import middle_fragments, _get_dir_dictionary, check_cnt_top_side, chec
 # lg.debug(test2)
 # exit()
 
-fileName = "nameless.png"
+fileName = "test2.png"
 
 img:ndarray          = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
 img_clr:ndarray      = cv2.imread(PATH_TO_INPUT_ + fileName)
@@ -49,18 +50,18 @@ count_of_col = 5
 step_x = img.shape[1] // count_of_col
 step_y = img.shape[0] // count_of_ecg
 
-x_sequence = [2]
-y_sequence = [0,1]
+x_sequence = [1]
+y_sequence = [2, 3]
 
-bottom_line = 212
+bottom_line = 150
 upper_line = 255
-step = 1
+step = 3
 
 ecg_cells = []
 WALL_DIR = _get_dir_dictionary()
 
 for i in range(count_of_ecg):
-  ecg_cells.append([[]]*count_of_col)
+  ecg_cells.append([Fragment_info()]*count_of_col)
 
 for x in x_sequence:
   for y in y_sequence:
@@ -80,12 +81,12 @@ for x in x_sequence:
       img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
       img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
       img_isl = draw_islands(islandsInFragment, img_isl)
-      lg.info(f"{up_value}, {len(islandsInFragment)}")
+      # lg.info(f"{up_value}, {len(islandsInFragment)}")
       cv2.imshow('w', img_isl)
       cv2.waitKey(10)
       #------------------------------------------------------
 
-      one_cell = []
+      one_cell:Fragment_info
 
       if x == 0:
         one_of_works = True
@@ -94,35 +95,37 @@ for x in x_sequence:
         one_of_works = True
       else:
         one_cell = middle_fragments(islandsInFragment,x,y,step_x,step_y)
-        one_of_works = len(one_cell) > 0
-        ecg_cells[y][x] = one_cell.copy()
+        ecg_cells[y][x] = one_cell
       
-      if len(ecg_cells[y][x]) == 0:
+      if len(one_cell) == 0:
         continue
 
-      fr_upper_cell = 0
-      to_upper_cell = 0
-      fr_cur_cell = 0
-      to_cur_cell = 0
+      upper_cell_trash = 0
+      cur_cell_trash = 0
       
       cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}{y}.png", img_isl)
-      if y > 0:
+        
+      if y == 0:
+        one_of_works = True
+      else:
         for direct in ecg_cells[y-1][x]:
-          if direct.fr == WALL_DIR['down']:
-            fr_upper_cell+=1
+          if direct.fr == WALL_DIR['down'] and direct.to == WALL_DIR['scum']:
+            upper_cell_trash += 1
+          if direct.to == WALL_DIR['down'] and direct.fr == WALL_DIR['scum']:
+            upper_cell_trash += 1
+        
+        expecting_top_crossing = ecg_cells[y-1][x].cnt_bottom_intersection - upper_cell_trash
 
-          if direct.to == WALL_DIR['down']:
-            to_upper_cell+=1
-        
-        if fr_upper_cell + to_upper_cell > 0:
-          for direct in ecg_cells[y][x]:
-            if direct.fr == WALL_DIR['top'] and direct.to != WALL_DIR['scum']: 
-              fr_cur_cell+=1
-            if direct.to == WALL_DIR['top'] and direct.fr != WALL_DIR['scum']:
-              to_cur_cell+=1
-        
-        if fr_cur_cell != to_upper_cell or to_cur_cell != fr_upper_cell:
-          one_of_works = False
+        for direct in one_cell:
+          if direct.fr == WALL_DIR['top'] and direct.to == WALL_DIR['scum']: 
+            cur_cell_trash += 1
+          if direct.to == WALL_DIR['top'] and direct.fr == WALL_DIR['scum']:
+            cur_cell_trash += 1
+            
+        actually_top_crossing = one_cell.cnt_top_intersection - cur_cell_trash
+
+        if expecting_top_crossing == actually_top_crossing:
+          one_of_works = True
       
       if one_of_works == True:
         pp(sorted(one_cell, key=lambda x: x.fr))

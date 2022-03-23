@@ -5,19 +5,42 @@ from logger import lg
 from logger import lg, initLogger
 
 from numpy import ndarray
+from analisis.classes.classes import get_line_dtype
 from analisis.loader.img_analizer import *
 from analisis.loader.mask_loader import *
 from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate
 from drawing.draw import *
-from drawing.show import *
 from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
 from collections import namedtuple
-from main import middle_fragments, _get_dir_dictionary
+from main import middle_fragments, _get_dir_dictionary, check_cnt_top_side, check_cnt_bottom_side
 
-fileName = "test1.png"
+# dtype_line = get_line_dtype()
+# isl = Island()
+# lines = np.zeros(5, dtype=dtype_line)
+
+# lines['index'] = [ 1,  2,  3,  4,  5]
+# lines['top']   = [ 0,  1,  0,  0,  1]
+# lines['down']  = [10, 15, 15, 10, 15]
+
+# isl += lines
+# isl.solidify()
+
+# img:ndarray = np.ones((30,30))*255
+# img = draw_island(isl, img)
+
+# test1 = check_cnt_top_side(isl, 0, 0)
+# test2 = check_cnt_bottom_side(isl, 0, 15)
+
+# cv2.imwrite(PATH_TO_OUTPUT_ + 'test.png', img)
+# lg.debug(test1)
+# lg.debug(test2)
+# exit()
+
+fileName = "nameless.png"
 
 img:ndarray          = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
 img_clr:ndarray      = cv2.imread(PATH_TO_INPUT_ + fileName)
+
 img_isl:np.ndarray   = img_clr.copy()
 
 count_of_ecg = 4
@@ -26,10 +49,10 @@ count_of_col = 5
 step_x = img.shape[1] // count_of_col
 step_y = img.shape[0] // count_of_ecg
 
-x_sequence = [3]
-y_sequence = [2,3]
+x_sequence = [2]
+y_sequence = [0,1]
 
-bottom_line = 200
+bottom_line = 212
 upper_line = 255
 step = 1
 
@@ -82,6 +105,7 @@ for x in x_sequence:
       fr_cur_cell = 0
       to_cur_cell = 0
       
+      cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}{y}.png", img_isl)
       if y > 0:
         for direct in ecg_cells[y-1][x]:
           if direct.fr == WALL_DIR['down']:
@@ -100,8 +124,7 @@ for x in x_sequence:
         if fr_cur_cell != to_upper_cell or to_cur_cell != fr_upper_cell:
           one_of_works = False
       
-      # cv2.imwrite(PATH_TO_OUTPUT_ + f"{up_value}.png", img_isl)
       if one_of_works == True:
         pp(sorted(one_cell, key=lambda x: x.fr))
-        cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}_{up_value}.png", img_isl)
+        cv2.imwrite(PATH_TO_OUTPUT_ + f"out_{x}_{y}_{up_value}.png", img_isl)
         break

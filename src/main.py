@@ -25,6 +25,32 @@ def _get_dir_dictionary()->dict:
 
 
 
+def check_cnt_top_side(island:Island, y:int, step_y:int) -> int:
+  if island.top > y*step_y: return 0
+
+  cnt = 1
+  lines = island.get_lines_at_top()
+  prev_x = lines[0]['index']
+
+  for line in lines[1:]:
+    if line['index'] != prev_x +1:
+      cnt += 1
+    prev_x = line['index']
+  return cnt
+
+def check_cnt_bottom_side(island:Island, y:int, step_y:int) -> int:
+  if island.down < (y+1)*step_y: return 0
+
+  cnt = 1
+  lines = island.get_lines_at_bottom()
+  prev_x = lines[0]['index']
+
+  for line in lines[1:]:
+    if line['index'] != prev_x +1:
+      cnt += 1
+    prev_x = line['index']
+  return cnt
+
 def check_from_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
   WALL_DIR = _get_dir_dictionary()
   dir_come_from = WALL_DIR['none']
@@ -62,7 +88,8 @@ def check_to_dir(island:Island, x:int, y:int, step_x:int, step_y:int):
   mid = island.left + island.width//2
   check_index = island.right
 
-  while check_index > mid and dir_come_to == WALL_DIR['none']:
+  while check_index >= mid and dir_come_to == WALL_DIR['none']:
+
     for right_line in ultraright_lines(check_index):
       if right_line['top'] == y*step_y:
         dir_come_to = WALL_DIR['top']
@@ -131,6 +158,8 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   dir_couple = namedtuple('couple', ['fr', 'to'])
   fr_to_array:list[dir_couple] = []
 
+  total_top    = 0
+  total_bottom = 0
 
   dir_come_from = WALL_DIR['scum']
   dir_come_to = WALL_DIR['scum']
@@ -138,16 +167,14 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   islands.sort(key=lambda x: x.left)
 
   for single in islands:
-    dir_come_from = WALL_DIR['scum']
-    dir_come_to = WALL_DIR['scum']
-
     dir_come_from = check_from_dir(single,x,y,step_x,step_y)
     dir_come_to = check_to_dir(single,x,y,step_x,step_y)
 
     fr_to_array.append (
       dir_couple(fr=dir_come_from, to=dir_come_to))
-    dir_fr_counter[dir_come_from] += 1
-    dir_to_counter[dir_come_to] += 1
+
+    total_top    += check_cnt_top_side(single, y, step_y)
+    total_bottom += check_cnt_bottom_side(single, y, step_y)
   x = 10
 
   if all([i.fr==WALL_DIR['scum'] for i in fr_to_array]):
@@ -158,9 +185,6 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   
   if all([i.fr==WALL_DIR['scum'] for i in fr_to_array if i.to == WALL_DIR['right']]):
     return []
-
-  total_top = dir_fr_counter[WALL_DIR['top']] + dir_to_counter[WALL_DIR['top']]
-  total_bottom = dir_fr_counter[WALL_DIR['down']] + dir_to_counter[WALL_DIR['down']]
 
   if (total_top % 2 != 0 or total_bottom % 2 != 0):
     return []

@@ -51,7 +51,7 @@ step_x = img.shape[1] // count_of_col
 step_y = img.shape[0] // count_of_ecg
 
 x_sequence = [1]
-y_sequence = [2, 3]
+y_sequence = [0,1,2, 3]
 
 bottom_line = 150
 upper_line = 255
@@ -91,7 +91,7 @@ for x in x_sequence:
       if x == 0:
         one_of_works = True
         # one_of_works = first_column_fragments(islandsInFragment,x,y,step_x,step_y)
-      elif x == count_of_ecg:
+      elif x == count_of_ecg:   
         one_of_works = True
       else:
         one_cell = middle_fragments(islandsInFragment,x,y,step_x,step_y)
@@ -101,6 +101,7 @@ for x in x_sequence:
         continue
 
       upper_cell_trash = 0
+      upper_cell_not_trash = 0
       cur_cell_trash = 0
       
       cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}{y}.png", img_isl)
@@ -113,8 +114,14 @@ for x in x_sequence:
             upper_cell_trash += 1
           if direct.to == WALL_DIR['down'] and direct.fr == WALL_DIR['scum']:
             upper_cell_trash += 1
-        
-        expecting_top_crossing = ecg_cells[y-1][x].cnt_bottom_intersection - upper_cell_trash
+          if direct.fr == WALL_DIR['down']:
+            upper_cell_not_trash += 1
+          if direct.to == WALL_DIR['down']:
+            upper_cell_not_trash += 1
+          
+        upper_cell_not_trash
+        expecting_top_crossing = ecg_cells[y-1][x].cnt_bottom_intersection
+        # expecting_top_crossing = upper_cell_not_trash
 
         for direct in one_cell:
           if direct.fr == WALL_DIR['top'] and direct.to == WALL_DIR['scum']: 

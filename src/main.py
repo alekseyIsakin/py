@@ -1,6 +1,8 @@
 import cProfile
+import os
 
 from pprint import pprint as pp
+import sys
 from logger import lg
 from logger import lg, initLogger
 
@@ -161,22 +163,35 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
 
 
 if __name__ == "__main__":
-  
-  #fileName = "nameless.png"
-  fileName = "test2.png"
 
-  img:np.ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
-  img_clr:np.ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
+  fileNameInput:str
 
-  lg.info(f"load image '{fileName}'")
-  lg.debug(f"resolution '{fileName}' is {img.shape}")
+  if len(sys.argv) >= 2:
+    fileNameInput = sys.argv[1]
+  else:
+    fileNameInput = "test2.png"
+
+  if len(sys.argv) == 3:
+    fileNameOutput = sys.argv[2]
+  else:
+    fileNameOutput = fileNameInput
+
+  if not os.path.exists(PATH_TO_INPUT_ + fileNameInput):
+    lg.error(f"file [{PATH_TO_INPUT_ + fileNameInput}] does not exist")
+    exit()
+
+  img:np.ndarray     = cv2.imread(PATH_TO_INPUT_ + fileNameInput, cv2.IMREAD_GRAYSCALE)
+  img_clr:np.ndarray = cv2.imread(PATH_TO_INPUT_ + fileNameInput)
+
+  lg.info(f"load image '{fileNameInput}'")
+  lg.debug(f"resolution '{fileNameInput}' is {img.shape}")
   fragmentsWithIslands:list[list[list[Island]]] = []
 
   #-----------------
   count_of_ecg = 4
   count_of_col = 5
   #-----------------
-
+ 
   ecg_cells:list[list[Fragment_info]] = []
 
   for i in range(count_of_ecg):
@@ -255,18 +270,25 @@ if __name__ == "__main__":
           continue
 
         upper_cell_trash = 0
+        upper_cell_not_trash = 0
         cur_cell_trash = 0
         
         if y == 0:
           one_of_works = True
         else:
           for direct in ecg_cells[y-1][x]:
-            if direct.fr == WALL_DIR['down'] and direct.to == WALL_DIR['scum']:
-              upper_cell_trash += 1
-            if direct.to == WALL_DIR['down'] and direct.fr == WALL_DIR['scum']:
-              upper_cell_trash += 1
+            if direct.fr == WALL_DIR['down']:
+              upper_cell_not_trash += 1
+            if direct.to == WALL_DIR['down']:
+              upper_cell_not_trash += 1
+            # if direct.fr == WALL_DIR['down'] and direct.to == WALL_DIR['scum']:
+            #   upper_cell_trash += 1
+            # if direct.to == WALL_DIR['down'] and direct.fr == WALL_DIR['scum']:
+            #   upper_cell_trash += 1
           
-          expecting_top_crossing = ecg_cells[y-1][x].cnt_bottom_intersection - upper_cell_trash
+          # expecting_top_crossing = ecg_cells[y-1][x].cnt_bottom_intersection - upper_cell_trash
+          expecting_top_crossing = ecg_cells[y-1][x].cnt_bottom_intersection
+          # expecting_top_crossing = upper_cell_not_trash
 
           for direct in one_cell:
             if direct.fr == WALL_DIR['top'] and direct.to == WALL_DIR['scum']: 
@@ -305,6 +327,6 @@ if __name__ == "__main__":
 
   img_isl = draw_islands(complete_isl, img_isl)
 
-  cv2.imwrite(PATH_TO_OUTPUT_ + "_FinalCut.png",img_isl)
+  cv2.imwrite(PATH_TO_OUTPUT_ + fileNameInput,img_isl)
 
   lg.info("fin")

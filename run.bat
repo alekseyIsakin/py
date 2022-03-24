@@ -1,3 +1,4 @@
+@echo off
 set project=%cd%
 
 cd ..
@@ -8,6 +9,6 @@ call "%cd%\env\Scripts\activate.bat"
 echo _
 cd %project%
 
-py "%~dp0src/main.py"
+py "%~dp0src/main.py" %~1
 
 pause

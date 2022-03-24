@@ -341,8 +341,16 @@ if __name__ == "__main__":
           cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}.png", img_isl)
           break
   
-  # x = count_of_ecg
   
+  # TODO: do it later
+  x_sequence = [0, count_of_ecg]
+  for x in x_sequence:
+    for y in y_sequence:
+      fragmentsWithIslands[x].append([])
+  
+  
+  
+  # x = count_of_ecg
   # for y in y_sequence:
   #   bottom_line = 150
   #   upper_line = 255

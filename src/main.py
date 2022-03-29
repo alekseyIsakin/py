@@ -18,10 +18,10 @@ from drawing.draw import draw_island, draw_islands
 initLogger(lg.DEBUG)
 lg.info("Start")
 
-def configure_get_fragment_func(img:np.ndarray, step_x:int, step_y:int, step_saturation:int):
+def configure_get_fragment_func(img:np.ndarray, step_x:int, step_y:int):
   
-  def get_islands_frogments_without_scum(up_value:int, x:int, y:int, img:np.ndarray=img, step_x=step_x, step_y:int=step_y,step:int=step_saturation):
-    mask_inv = get_mask_from_gray(img, upper_val=up_value-step*5)
+  def get_islands_frogments_without_scum(up_value:int, x:int, y:int, img:np.ndarray=img, step_x=step_x, step_y:int=step_y):
+    mask_inv = get_mask_from_gray(img, upper_val=up_value)
     islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
             
     i=0
@@ -248,7 +248,7 @@ def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, st
 if __name__ == "__main__":
   
   #fileName = "nameless.png"
-  fileName = "test1.png"
+  fileName = "test3.png"
 
   img:np.ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
   img_clr:np.ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
@@ -288,7 +288,7 @@ if __name__ == "__main__":
   x_sequence = sequence
 
 
-  cv2.imshow('w', img_isl)
+  cv2.imshow(fileName, img_isl)
   cv2.waitKey(10)
 
   # For fragments in center of picture
@@ -297,8 +297,10 @@ if __name__ == "__main__":
   bottom_line = 150
   upper_line = 255
   step = 3
+  step_back = step * 5
 
-  calculate_fragment = configure_get_fragment_func(img, step_x, step_y, step)
+
+  calculate_fragment = configure_get_fragment_func(img, step_x, step_y)
 
   for x in x_sequence:
     for y in y_sequence:
@@ -322,7 +324,7 @@ if __name__ == "__main__":
         img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
         img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
         img_isl = draw_islands(islandsInFragment, img_isl)
-        cv2.imshow('w', img_isl)
+        cv2.imshow(fileName, img_isl)
         cv2.waitKey(10)
         #------------------------------------------------------
 
@@ -383,35 +385,34 @@ if __name__ == "__main__":
   
   # For last and previous fragments in picture
   x_sequence = [0, count_of_ecg]
+
   for x in x_sequence:
     for y in y_sequence:
       fragmentsWithIslands[x].append([])
-      bottom_line = round(sredn_arifm)
+      bottom_line = round(sredn_arifm) - step*7
       upper_line = 255
       step = 3
       islands_len.clear()
     
-      bottom_line -= step*5
-
       for up_value in range(bottom_line,upper_line,step):
 
         # lg.debug(f">> step [{x}|{y}][{up_value}]")
+        islandsInFragment = calculate_fragment(up_value, x, y)
+        # mask_inv = get_mask_from_gray(img, upper_val=up_value)
+        # islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
-        mask_inv = get_mask_from_gray(img, upper_val=up_value)      
-        islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
-
-        i=0
-        while i != len(islandsInFragment):
-          if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
-            del islandsInFragment[i]
-          else:
-            i+=1
+        # i=0
+        # while i != len(islandsInFragment):
+        #   if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
+        #     del islandsInFragment[i]
+        #   else:
+        #     i+=1
 
         #------------------------------------------------------
         img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
         img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
         img_isl = draw_islands(islandsInFragment, img_isl)
-        cv2.imshow('w', img_isl)
+        cv2.imshow(fileName, img_isl)
         cv2.waitKey(10)
         #------------------------------------------------------
 
@@ -445,14 +446,14 @@ if __name__ == "__main__":
 
         if (summ2 >= summ1 and summ2 <= summ1 + 10) or (summ2 >= summ1 - 10 and summ2 <= summ1):
 
-          islandsInFragment = calculate_fragment(up_value, x, y)
+          islandsInFragment = calculate_fragment(up_value - step*5, x, y)
 
           upper_cell_trash = 0
           cur_cell_trash = 0
 
-          lg.debug(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
+          lg.debug(f"При насыщенности {up_value - step*5} островов найдено {len(islandsInFragment)}")
 
-          ecg_cells[y][x].saturation = up_value
+          ecg_cells[y][x].saturation = up_value - step*5
 
           fragmentsWithIslands[x].append(islandsInFragment.copy())
 

@@ -18,6 +18,36 @@ from drawing.draw import draw_island, draw_islands
 initLogger(lg.DEBUG)
 lg.info("Start")
 
+def configure_get_fragment_func(img:np.ndarray, step_x:int, step_y:int, step_saturation:int):
+  
+  def get_islands_frogments_without_scum(up_value:int, x:int, y:int, img:np.ndarray=img, step_x=step_x, step_y:int=step_y,step:int=step_saturation):
+    mask_inv = get_mask_from_gray(img, upper_val=up_value-step*5)
+    islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
+            
+    i=0
+    while i != len(islandsInFragment):
+      if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
+        del islandsInFragment[i]
+      else:
+        i+=1
+    return islandsInFragment
+
+  return get_islands_frogments_without_scum
+
+
+# def get_islands_frogments_without_scum(img:np.ndarray,up_value:int, step:int, x:int, y:int, step_x:int, step_y:int):
+  
+#   mask_inv = get_mask_from_gray(img, upper_val=up_value-step*5)
+#   islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
+          
+#   i=0
+#   while i != len(islandsInFragment):
+#     if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
+#       del islandsInFragment[i]
+#     else:
+#       i+=1
+      
+
 def check_cnt_top_side(island:Island, y:int, step_y:int) -> int:
   if island.top > y*step_y: return 0
 
@@ -170,41 +200,44 @@ def last_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y
 
     if dir_come_from == WALL_DIR["left"] or dir_come_from == WALL_DIR["down"]:
       if (single.width > 3):
-        dir_come_to = check_to_dir(islands[0],x,y,step_x,step_y)
-        if dir_come_to != WALL_DIR['scum']:
-          continue
-        else:
-          island_len = single.width
-          return island_len
+        # dir_come_to = check_from_dir(islands[0],x,y,step_x,step_y)
+        island_len = int(single.width)
+        return island_len
   
   return island_len
 
-  # for single in islands:
+def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
+  cell = Fragment_info()
+  island_len = 0
 
-  #   dir_come_from = check_from_dir(single,x,y,step_x,step_y)
+  if len(islands) == 0:
+    return island_len
 
-  #   if (single.width > 3):
-  #     dir_come_to = check_to_dir(single,x,y,step_x,step_y)
-  #   else:
-  #     dir_come_to = WALL_DIR['scum']
-      
-  #   fr_to_array.append (
-  #     dir_couple(fr=dir_come_from, to=dir_come_to))
+  WALL_DIR = _get_dir_dictionary()
 
-  #   total_top    += check_cnt_top_side(single, y, step_y)
-  #   total_bottom += check_cnt_bottom_side(single, y, step_y)
-  # x = 10
+  dir_come_from = WALL_DIR['scum']
+  dir_come_to = WALL_DIR['scum']
 
-  # if all([i.fr==WALL_DIR['scum'] for i in fr_to_array]):
-  #   return cell
+  dir_couple = _get_fragment_dir_tuple()
+  #fr_to_array:list[dir_couple] = []
 
-  # if all([i.fr==WALL_DIR['scum'] for i in fr_to_array if i.to == WALL_DIR['right']]):
-  #   return cell
+  #islands.sort(key=lambda x: x.left)
+  islands.sort(key=lambda x: (x.right - x.left), reverse=True)
 
-  # if all([i.to==WALL_DIR['scum'] for i in fr_to_array if i.fr == WALL_DIR['left']]):
-  #   return cell
+  for single in islands:
+    dir_come_to = check_to_dir(single,x,y,step_x,step_y)
+ 
+    if dir_come_to == WALL_DIR["scum"]:
+      return island_len
 
-  # return cell
+    if dir_come_to == WALL_DIR["right"] or dir_come_to == WALL_DIR["down"]:
+      if (single.width > 3):
+        # dir_come_from = check_from_dir(islands[0],x,y,step_x,step_y)
+        island_len = int(single.width)
+        return island_len
+  
+  return island_len
+
 
 #|ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ|
 #|ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ|
@@ -215,7 +248,7 @@ def last_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y
 if __name__ == "__main__":
   
   #fileName = "nameless.png"
-  fileName = "test3.png"
+  fileName = "test1.png"
 
   img:np.ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
   img_clr:np.ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
@@ -238,7 +271,7 @@ if __name__ == "__main__":
   
 
   for i in range(count_of_ecg):
-    ecg_cells.append([0]*count_of_col)
+    ecg_cells.append([Fragment_info()]*count_of_col)
     cells_saturation.append([0]*count_of_col)
 
   step_x = img.shape[1] // count_of_col
@@ -258,26 +291,32 @@ if __name__ == "__main__":
   cv2.imshow('w', img_isl)
   cv2.waitKey(10)
 
+  # For fragments in center of picture
   lg.info(f"start fragment building")
+
+  bottom_line = 150
+  upper_line = 255
+  step = 3
+
+  calculate_fragment = configure_get_fragment_func(img, step_x, step_y, step)
+
   for x in x_sequence:
     for y in y_sequence:
-      bottom_line = 150
-      upper_line = 255
-      step = 3
 
       for up_value in range(bottom_line,upper_line,step):
 
         lg.debug(f">> step [{x}|{y}][{up_value}]")
+        islandsInFragment = calculate_fragment(up_value, x, y)
+        
+        # mask_inv = get_mask_from_gray(img, upper_val=up_value)      
+        # islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
 
-        mask_inv = get_mask_from_gray(img, upper_val=up_value)      
-        islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
-
-        i=0
-        while i != len(islandsInFragment):
-          if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
-            del islandsInFragment[i]
-          else:
-            i+=1
+        # i=0
+        # while i != len(islandsInFragment):
+        #   if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
+        #     del islandsInFragment[i]
+        #   else:
+        #     i+=1
 
         #------------------------------------------------------
         img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
@@ -342,104 +381,92 @@ if __name__ == "__main__":
           break
   
   
-  # TODO: do it later
+  # For last and previous fragments in picture
   x_sequence = [0, count_of_ecg]
   for x in x_sequence:
     for y in y_sequence:
       fragmentsWithIslands[x].append([])
-  
-  
-  
-  # x = count_of_ecg
-  # for y in y_sequence:
-  #   bottom_line = 150
-  #   upper_line = 255
-  #   step = 3
-  #   islands_len.clear()
-   
-  #   bottom_line = round(sredn_arifm)
-  #   bottom_line -= step*5
-
-  #   for up_value in range(bottom_line,upper_line,step):
-
-  #     lg.debug(f">> step [{x}|{y}][{up_value}]")
-  #     # lg.debug(f">> step [{x}|{y}][{up_value}]")
-
-  #     mask_inv = get_mask_from_gray(img, upper_val=up_value)      
-  #     islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
-
-  #     i=0
-  #     while i != len(islandsInFragment):
-  #       if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
-  #         del islandsInFragment[i]
-  #       else:
-  #         i+=1
-
-  #     #------------------------------------------------------
-  #     img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
-  #     img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
-  #     img_isl = draw_islands(islandsInFragment, img_isl)
-  #     cv2.imshow('w', img_isl)
-  #     cv2.waitKey(10)
-  #     #------------------------------------------------------
-
-
-  #     one_of_works = False
-  #     one_cell:Fragment_info
-  #     len_of_island = 0
-
-  #     len_of_island = last_column_fragments(islandsInFragment,x,y,step_x,step_y)      
-
-  #     if len(islands_len) < 5:
-  #       islands_len.append(len_of_island)
-  #       continue
+      bottom_line = round(sredn_arifm)
+      upper_line = 255
+      step = 3
+      islands_len.clear()
     
-  #     summ1 = sum(islands_len) - islands_len[-1]
-  #     summ2 = sum(islands_len) - islands_len.pop(0)
+      bottom_line -= step*5
+
+      for up_value in range(bottom_line,upper_line,step):
+
+        # lg.debug(f">> step [{x}|{y}][{up_value}]")
+
+        mask_inv = get_mask_from_gray(img, upper_val=up_value)      
+        islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
+
+        i=0
+        while i != len(islandsInFragment):
+          if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
+            del islandsInFragment[i]
+          else:
+            i+=1
+
+        #------------------------------------------------------
+        img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
+        img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
+        img_isl = draw_islands(islandsInFragment, img_isl)
+        cv2.imshow('w', img_isl)
+        cv2.waitKey(10)
+        #------------------------------------------------------
+
+
+        one_of_works = False
+        one_cell:Fragment_info
+        len_of_island = 0
+        if x == 0:
+          len_of_island = previous_column_fragments(islandsInFragment,x,y,step_x,step_y)
+          if len_of_island == 0:
+            continue
+        else:
+          len_of_island = last_column_fragments(islandsInFragment,x,y,step_x,step_y)
+          if len_of_island == 0:
+            continue
+
+
+        if len(islands_len) < 5:
+          islands_len.append(len_of_island)
+          continue
       
-  #     summ1 = summ1/4
-  #     summ2 = summ2/4
-  #     # didn't work
-  #     if (summ2 >= summ1 and summ2 <= summ1 + 5):
-  #       continue
-
-  #     upper_cell_trash = 0
-  #     cur_cell_trash = 0
-
-  #     if y == 0:
-  #       one_of_works = True
-  #     else:
-  #       for direct in ecg_cells[y-1][x]:
-  #         if direct.fr == WALL_DIR['down'] and direct.to == WALL_DIR['scum']:
-  #           upper_cell_trash += 1
-  #         if direct.to == WALL_DIR['down'] and direct.fr == WALL_DIR['scum']:
-  #           upper_cell_trash += 1
+        summ1 = sum(islands_len)
+        islands_len.pop(0)
+        islands_len.append(len_of_island)
+        summ2 = sum(islands_len)
         
-  #       expecting_top_crossing = ecg_cells[y-1][x].cnt_bottom_intersection - upper_cell_trash
-
-  #       for direct in one_cell:
-  #         if direct.fr == WALL_DIR['top'] and direct.to == WALL_DIR['scum']: 
-  #           cur_cell_trash += 1
-  #         if direct.to == WALL_DIR['top'] and direct.fr == WALL_DIR['scum']:
-  #           cur_cell_trash += 1
-            
-  #       actually_top_crossing = one_cell.cnt_top_intersection - cur_cell_trash
-
-  #       if expecting_top_crossing == actually_top_crossing:
-  #         one_of_works = True
-
-
-  #     if one_of_works == True:
-  #       lg.debug(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
-
-  #       one_cell.saturation = up_value
-  #       ecg_cells[y][x] = one_cell
-
-  #       fragmentsWithIslands[x].append(islandsInFragment.copy())
-  #       cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}.png", img_isl)
-  #       break
-
+        summ1 = summ1/5
+        summ2 = summ2/5
         
+        lg.debug(f">> step [{x}|{y}][{up_value}] [{summ1} => {summ2}]")
+
+        if (summ2 >= summ1 and summ2 <= summ1 + 10) or (summ2 >= summ1 - 10 and summ2 <= summ1):
+
+          islandsInFragment = calculate_fragment(up_value, x, y)
+
+          upper_cell_trash = 0
+          cur_cell_trash = 0
+
+          lg.debug(f"При насыщенности {up_value} островов найдено {len(islandsInFragment)}")
+
+          ecg_cells[y][x].saturation = up_value
+
+          fragmentsWithIslands[x].append(islandsInFragment.copy())
+
+          #------------------------------------------------------
+          img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
+          img_isl = cv2.rectangle(img_isl, (x*step_x, y*step_y),((x+1)*step_x,(y+1)*step_y,), color=(0,0,255))
+          img_isl = draw_islands(islandsInFragment, img_isl)
+          #------------------------------------------------------
+
+          cv2.imwrite(PATH_TO_OUTPUT_ + f"{x}_{y}.png", img_isl)
+          break
+        else:
+          continue
+
 
   cv2.imwrite(PATH_TO_OUTPUT_ + "_islands1.png", img_isl)
 

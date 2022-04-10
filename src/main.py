@@ -175,7 +175,7 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   return cell
 
 def last_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
-  cell = Fragment_info()
+  #cell = Fragment_info()
   island_len = 0
 
   if len(islands) == 0:
@@ -184,9 +184,9 @@ def last_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y
   WALL_DIR = _get_dir_dictionary()
 
   dir_come_from = WALL_DIR['scum']
-  dir_come_to = WALL_DIR['scum']
+  #dir_come_to = WALL_DIR['scum']
 
-  dir_couple = _get_fragment_dir_tuple()
+  #dir_couple = _get_fragment_dir_tuple()
   #fr_to_array:list[dir_couple] = []
 
   #islands.sort(key=lambda x: x.left)
@@ -207,7 +207,7 @@ def last_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y
   return island_len
 
 def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
-  cell = Fragment_info()
+  #cell = Fragment_info()
   island_len = 0
 
   if len(islands) == 0:
@@ -215,10 +215,10 @@ def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, st
 
   WALL_DIR = _get_dir_dictionary()
 
-  dir_come_from = WALL_DIR['scum']
+  #dir_come_from = WALL_DIR['scum']
   dir_come_to = WALL_DIR['scum']
 
-  dir_couple = _get_fragment_dir_tuple()
+  #dir_couple = _get_fragment_dir_tuple()
   #fr_to_array:list[dir_couple] = []
 
   #islands.sort(key=lambda x: x.left)
@@ -441,10 +441,16 @@ if __name__ == "__main__":
         
         summ1 = summ1/5
         summ2 = summ2/5
-        
+
         lg.debug(f">> step [{x}|{y}][{up_value}] [{summ1} => {summ2}]")
 
+        if (y != 0 and  summ2 < previous_cell_len - 50):
+          continue
+
         if (summ2 >= summ1 and summ2 <= summ1 + 10) or (summ2 >= summ1 - 10 and summ2 <= summ1):
+
+          if (y == 0):
+            previous_cell_len = summ1
 
           islandsInFragment = calculate_fragment(up_value - step*5, x, y)
 

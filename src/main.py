@@ -1,7 +1,12 @@
 import cProfile
 
 from pprint import pprint as pp
-from turtle import left
+import string
+from turtle import down, left, right
+from pandas import crosstab
+
+from pyparsing import line
+from classes import Line
 from logger import lg
 from logger import lg, initLogger
 
@@ -9,10 +14,10 @@ import numpy as np
 import cv2
 # from analisis.loader.img_analizer import 
 from analisis.loader.mask_loader import get_mask_from_gray
-from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate
+from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate, get_lines
 from analisis.classes.classes import Island, Fragment_info
 from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
-from constant.other import _get_dir_dictionary, _get_fragment_dir_tuple
+from constant.other import _get_dir_dictionary, _get_fragment_dir_tuple, _get_line_dtype
 from drawing.draw import draw_island, draw_islands
 
 initLogger(lg.DEBUG)
@@ -33,21 +38,7 @@ def configure_get_fragment_func(img:np.ndarray, step_x:int, step_y:int):
     return islandsInFragment
 
   return get_islands_frogments_without_scum
-
-
-# def get_islands_frogments_without_scum(img:np.ndarray,up_value:int, step:int, x:int, y:int, step_x:int, step_y:int):
-  
-#   mask_inv = get_mask_from_gray(img, upper_val=up_value-step*5)
-#   islandsInFragment = fragment_calculate(y*step_y,x*step_x,  step_y+1,step_x+1, mask_inv)
-          
-#   i=0
-#   while i != len(islandsInFragment):
-#     if islandsInFragment[i].width <= 3 and islandsInFragment[i].height <= 3:
-#       del islandsInFragment[i]
-#     else:
-#       i+=1
       
-
 def check_cnt_top_side(island:Island, y:int, step_y:int) -> int:
   if island.top > y*step_y: return 0
 
@@ -175,7 +166,6 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
   return cell
 
 def last_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
-  #cell = Fragment_info()
   island_len = 0
 
   if len(islands) == 0:
@@ -184,12 +174,7 @@ def last_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y
   WALL_DIR = _get_dir_dictionary()
 
   dir_come_from = WALL_DIR['scum']
-  #dir_come_to = WALL_DIR['scum']
 
-  #dir_couple = _get_fragment_dir_tuple()
-  #fr_to_array:list[dir_couple] = []
-
-  #islands.sort(key=lambda x: x.left)
   islands.sort(key=lambda x: (x.right - x.left), reverse=True)
 
   for single in islands:
@@ -200,14 +185,12 @@ def last_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y
 
     if dir_come_from == WALL_DIR["left"] or dir_come_from == WALL_DIR["down"]:
       if (single.width > 3):
-        # dir_come_to = check_from_dir(islands[0],x,y,step_x,step_y)
         island_len = int(single.width)
         return island_len
   
   return island_len
 
 def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int):
-  #cell = Fragment_info()
   island_len = 0
 
   if len(islands) == 0:
@@ -215,13 +198,8 @@ def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, st
 
   WALL_DIR = _get_dir_dictionary()
 
-  #dir_come_from = WALL_DIR['scum']
   dir_come_to = WALL_DIR['scum']
 
-  #dir_couple = _get_fragment_dir_tuple()
-  #fr_to_array:list[dir_couple] = []
-
-  #islands.sort(key=lambda x: x.left)
   islands.sort(key=lambda x: (x.right - x.left), reverse=True)
 
   for single in islands:
@@ -232,7 +210,6 @@ def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, st
 
     if dir_come_to == WALL_DIR["right"] or dir_come_to == WALL_DIR["down"]:
       if (single.width > 3):
-        # dir_come_from = check_from_dir(islands[0],x,y,step_x,step_y)
         island_len = int(single.width)
         return island_len
   
@@ -247,7 +224,6 @@ def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, st
 
 if __name__ == "__main__":
   
-  #fileName = "nameless.png"
   fileName = "test3.png"
 
   img:np.ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
@@ -387,6 +363,7 @@ if __name__ == "__main__":
   x_sequence = [0, count_of_ecg]
 
   for x in x_sequence:
+    previous_cell_len = 0
     for y in y_sequence:
       fragmentsWithIslands[x].append([])
       bottom_line = round(sredn_arifm) - step*7
@@ -444,13 +421,13 @@ if __name__ == "__main__":
 
         lg.debug(f">> step [{x}|{y}][{up_value}] [{summ1} => {summ2}]")
 
-        if (y != 0 and  summ2 < previous_cell_len - 50):
+        if (y != 0 and  summ2 < previous_cell_len - 30):
           continue
 
-        if (summ2 >= summ1 and summ2 <= summ1 + 10) or (summ2 >= summ1 - 10 and summ2 <= summ1):
+        if (summ2 >= summ1 and summ2 <= summ1 + 5) or (summ2 >= summ1 - 5 and summ2 <= summ1):
+          
+          previous_cell_len = summ2
 
-          if (y == 0):
-            previous_cell_len = summ1
 
           islandsInFragment = calculate_fragment(up_value - step*5, x, y)
 
@@ -484,9 +461,61 @@ if __name__ == "__main__":
   for isl in complete_isl:
     isl.solidify()
 
-  complete_isl = sorted(complete_isl, key=len)
+  complete_isl = sorted(complete_isl, key=lambda x: x.left)
 
-  img_isl = draw_islands(complete_isl, img_isl)
+  final_complete:list[Island] = []
+  current_island = complete_isl.pop(0)
+
+  while len(complete_isl) != 0:
+    right_x = current_island.right
+    check_isl_index = len(complete_isl)-1
+    while check_isl_index != 0:
+      check_island = complete_isl[check_isl_index]
+      
+      if (abs(right_x - check_island.left) > 2):
+        check_isl_index-=1
+        continue
+
+      if (check_island.left > right_x):
+        crossline_range = range(right_x, check_island.left+1)
+      else:
+        crossline_range = range(check_island.left, right_x+1)
+
+      fusion_found = False
+
+      for line_index in crossline_range:
+        cur_isl_lines_at_x:list[Line] = current_island.get_lines_at_index(line_index)
+        check_isl_lines_at_x:list[Line] = check_island.get_lines_at_index(line_index)
+        
+        if (len(cur_isl_lines_at_x) == 0 or len(check_isl_lines_at_x) == 0):
+          continue
+
+        if cur_isl_lines_at_x[0]["top"] < check_isl_lines_at_x[0]["top"]:   #current line higher that check
+          top_line = cur_isl_lines_at_x[-1]
+          down_line = check_isl_lines_at_x[0]
+        else:                                                               #check line higher that current
+          down_line = cur_isl_lines_at_x[0]
+          top_line = check_isl_lines_at_x[-1]
+
+
+        if (down_line["top"] - top_line["down"] <= 2):
+          l = np.empty(1, dtype=_get_line_dtype())
+          l['index'] = [line_index] 
+          l['top']   = [top_line["top"]]
+          l['down']  = [down_line["down"]]
+          current_island += l
+          current_island += complete_isl.pop(check_isl_index)
+          fusion_found = True
+          break
+        
+      if not(fusion_found):
+        check_isl_index-=1
+
+    final_complete.append(current_island)
+    current_island = complete_isl.pop(0)
+
+
+  img_isl = draw_islands(final_complete, img_isl)
 
   cv2.imwrite(PATH_TO_OUTPUT_ + "_FinalCut.png",img_isl)
 

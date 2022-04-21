@@ -1,8 +1,10 @@
+from audioop import reverse
 import cProfile
 from os import access
 
 from pprint import pprint as pp
 import string
+from symbol import lambdef_nocond
 from turtle import down, left, right
 from pandas import crosstab
 
@@ -532,8 +534,9 @@ if __name__ == "__main__":
 
     final_complete.append(current_island)
     current_island = complete_isl.pop(0)
-
-
+    
+  final_complete = sorted(final_complete, key=len, reverse = True)[:count_of_ecg]
+  
   img_isl = draw_islands(final_complete, img_isl)
 
   cv2.imwrite(PATH_TO_OUTPUT_ + "_FinalCut.png",img_isl)

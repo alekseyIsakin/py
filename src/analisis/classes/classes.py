@@ -164,6 +164,8 @@ class Fragment_info:
     self.cnt_top_intersection = 0
     self.cnt_bottom_intersection = 0
     self.saturation = 0
+    self.top_accuracy = 0
+    self.bottom_accuracy = 0
   
 
   def __getitem__(self, key) -> tuple:

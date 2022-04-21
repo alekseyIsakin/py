@@ -1,4 +1,5 @@
 import cProfile
+from os import access
 
 from pprint import pprint as pp
 import string
@@ -144,9 +145,25 @@ def middle_fragments(islands:list[Island], x:int, y:int, step_x:int, step_y:int)
     fr_to_array.append (
       dir_couple(fr=dir_come_from, to=dir_come_to))
 
-    total_top    += check_cnt_top_side(single, y, step_y)
-    total_bottom += check_cnt_bottom_side(single, y, step_y)
-  x = 10
+    top_intersections = check_cnt_top_side(single, y, step_y)
+    bottom_intersections = check_cnt_bottom_side(single, y, step_y)
+
+    if (top_intersections > 0):
+      cell.top_accuracy += top_intersections
+      if dir_come_to == WALL_DIR['top']:
+        cell.top_accuracy-=1
+      if dir_come_from == WALL_DIR['top']:
+        cell.top_accuracy-=1
+
+    if (bottom_intersections > 0):
+      cell.bottom_accuracy += bottom_intersections
+      if dir_come_to == WALL_DIR['down']:
+        cell.bottom_accuracy-=1
+      if dir_come_from == WALL_DIR['down']:
+        cell.bottom_accuracy-=1
+
+    total_top    += top_intersections
+    total_bottom += bottom_intersections
 
   if all([i.fr==WALL_DIR['scum'] for i in fr_to_array]):
     return cell
@@ -224,8 +241,10 @@ def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, st
 
 if __name__ == "__main__":
   
-  fileName = "test3.png"
-
+  #fileName = "test2.png"
+  #fileName = "test3.png"
+  fileName = "test6.png"
+  
   img:np.ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
   img_clr:np.ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
 
@@ -325,7 +344,7 @@ if __name__ == "__main__":
             if direct.to == WALL_DIR['down'] and direct.fr == WALL_DIR['scum']:
               upper_cell_trash += 1
           
-          expecting_top_crossing = ecg_cells[y-1][x].cnt_bottom_intersection - upper_cell_trash
+          expecting_top_crossing = ecg_cells[y-1][x].cnt_bottom_intersection # - upper_cell_trash
 
           for direct in one_cell:
             if direct.fr == WALL_DIR['top'] and direct.to == WALL_DIR['scum']: 
@@ -333,9 +352,9 @@ if __name__ == "__main__":
             if direct.to == WALL_DIR['top'] and direct.fr == WALL_DIR['scum']:
               cur_cell_trash += 1
               
-          actually_top_crossing = one_cell.cnt_top_intersection - cur_cell_trash
+          actually_top_crossing = one_cell.cnt_top_intersection # - cur_cell_trash
 
-          if expecting_top_crossing == actually_top_crossing:
+          if actually_top_crossing <= expecting_top_crossing and actually_top_crossing >= (expecting_top_crossing - ecg_cells[y-1][x].bottom_accuracy):
             one_of_works = True
 
 

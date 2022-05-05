@@ -4,21 +4,36 @@ def test_connection():
     print('Connected')
 
 def getLine(x, y): #Возвращает предполагаемую ось, принимает 2 массива содержащих координаты точек графика для каждой оси
+    
+    ###########--functions--###########
 
-    ###########functions###########
+    def slide(x,step):
+        for ind in range(0, len(x)):
+            sum = 0
+            max_arr_ind = ind
+            if (ind + step > len(x)):
+                break
+            for i in range(0, step):
+                if (ind + i < len(x)):
+                    sum += x[ind+i]
+                    if (x[ind + i] > x[max_arr_ind]):
+                         max_arr_ind = x[ind + i]
+            x[max_arr_ind] = m.ceil(sum / step)
+        return x
 
-    def get_min_max(arr): #Максимальное  и минимальное значение в массиве
-        cur_max = 0
+    def get_min(arr): #Минимальное значение в массиве
         cur_min = arr[0]
+        for value in arr:
+            if (value < cur_min):
+                cur_min = value
+        return cur_min
 
+    def get_max(arr):  # Максимальное значение в массиве
+        cur_max = 0
         for value in arr:
             if (value > cur_max):
                 cur_max = value
-            elif (value < cur_min):
-                cur_min = value
-        
-        result = [cur_min, cur_max]
-        return result
+        return cur_max
 
     def get_avg(arr): #Среднее значение в массиве
         avg_val = 0
@@ -27,61 +42,57 @@ def getLine(x, y): #Возвращает предполагаемую ось, п
         return avg_val/len(arr)
 
     def get_equation_result(i, j, k):
-        return m.exp(i+j*k)
+        return i*k+j
 
-    def perform_exp_interp(): #Апроксимация
-        x_sum = 0
+    def perform_exp_interp(): #Регрессия
         x_sum_pow = 0
-        x_log_pow = 0
-        y_log = 0
-        x_ylog = 0
-        n = len(x_linear)
-
-        for ind in range(0, n):
-            x_sum += x_linear[ind]
-            x_sum_pow += x_linear[ind] ** 2
-            y_log += m.log(y_linear[ind])
-            x_log_pow += m.log(x_linear[ind]) ** 2
-            x_ylog += x_linear[ind] * m.log(y_linear[ind])
-
-        b = (n*x_ylog-x_sum*y_log)/(n*x_sum_pow-x_sum**2) #Экспоненциальная
-        a = (1/n)*y_log-(b/n)*x_sum #Экспоненциальная
+        xy_sum = 0
+        n = len(x)
+        avg_x = get_avg(x)
+        avg_y = get_avg(y)
         
-        res = [a, b, n]
-        return res
+        for ind in range(0, n):
+            x_sum_pow += (x[ind] - avg_x)**2
+            xy_sum += (x[ind] - avg_x) * (y[ind] - avg_y)
 
-    def perform_clearance(start, tolerance, a, b): #Приземляет значения, нахожящиеся от апроксимации на расстоянии большем tolerance
-        for ind in range(start, len(x_linear)):
-            y_new = get_equation_result(a, b, x_linear[ind])
-            if (m.fabs(y_new - y_linear[ind]) > tolerance):
-                #x_linear.remove(x_linear[ind])
-                y_linear[ind] = y_new + m.copysign(tolerance, y_new - y_linear[ind])
-                perform_clearance(ind - 1, tolerance, a, b)
-                return
+        a = xy_sum/x_sum_pow
+        b = avg_y - a*avg_x
 
-    ###########functions###########
+        return [a, b, n]
+
+    def perform_clearance(tolerance, normal): #Приземляет значения, находящиеся от апроксимации на расстоянии большем tolerance
+        K=normal[1]-normal[0]
+        N=normal[3]-normal[2]
+        for ind in range(0, len(x_linear)):
+            t=(K*x_linear[ind]+N*y_linear[ind]-K*normal[0]-N*normal[2])/((K**2)+(N**2))
+            x_new=K*t+normal[0]
+            y_new=N*t+normal[2]
+            length=m.sqrt(((x_new-x_linear[ind])**2)+((y_new-y_linear[ind])**2))
+
+            if (length > tolerance):
+                x_linear[ind] = m.floor(x_new) + m.copysign(tolerance, x_new - x_linear[ind])
+                y_linear[ind] = m.floor(y_new) + m.copysign(tolerance, y_new - y_linear[ind])
+
+    ###########--program--###########
+    x_avg = get_avg(x)
+    x_min = get_min(x)
+    x_max = get_max(x)
+
+    y_avg = get_avg(y)
+    y_min = get_min(y)
+    y_max = get_max(y)
+    
 
     x_linear = x.copy()
-    y_linear = y.copy()
+    y_linear = slide(y.copy(), 10) #Сглаживает график по оси OY
+    
+    koeff = perform_exp_interp() #Строит экспоненциальное уравнение
 
+    tolerance = m.fabs(m.floor(y_max/(y_avg-y_min))+m.floor(y_min/(y_max-y_avg))+m.floor(y_avg/(y_max-y_min))) 
+    perform_clearance(tolerance, [x_min, x_max, get_equation_result(koeff[0], koeff[1], x_min), get_equation_result(koeff[0], koeff[1], x_max)]) #Приближает значения OY к экспоненциальной линии
     koeff = perform_exp_interp()
-    perform_clearance(0, 15, koeff[0], koeff[1])
-    koeff = perform_exp_interp()
 
-    x1 = []
-    y1 = []
-
-    x_min_max = get_min_max(x)
-    x1.append(x_min_max[0])
-    x1.append(x_min_max[1])
-    y_temp = [get_equation_result(koeff[0], koeff[1], x1[0]), get_equation_result(koeff[0], koeff[1], x1[1])]
-
-    y_avg = get_avg(y_linear)
-    fault = m.fabs(y_temp[0] - y_avg)-m.fabs(y_temp[1] - y_avg)
-
-    y1.append(y_temp[0]+fault)
-    y1.append(y_temp[1]+fault)
-
-    line = [[x1[0], y1[0]], [x1[1], y1[1]]]
+    #Выходные данные - линия вида: [[x1, y1];[x2, y2]]
+    line = [[get_min(x_linear), get_equation_result(koeff[0], koeff[1], get_min(x_linear))], [get_max(x_linear), get_equation_result(koeff[0], koeff[1], get_max(x_linear))]]
 
     return line

@@ -21,7 +21,7 @@ from analisis.loader.islands import build_islands_from_fragmets, fragment_calcul
 from analisis.classes.classes import Island, Fragment_info
 from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
 from constant.other import _get_dir_dictionary, _get_fragment_dir_tuple, _get_line_dtype
-from drawing.draw import draw_island, draw_islands
+from drawing.draw import draw_islands_final, draw_islands
 
 initLogger(lg.DEBUG)
 lg.info("Start")
@@ -244,8 +244,8 @@ def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, st
 if __name__ == "__main__":
   
   #fileName = "test2.png"
-  #fileName = "test3.png"
-  fileName = "test6.png"
+  fileName = "test3.png"
+  #fileName = "test6.png"
   
   img:np.ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)
   img_clr:np.ndarray = cv2.imread(PATH_TO_INPUT_ + fileName)
@@ -537,7 +537,7 @@ if __name__ == "__main__":
     
   final_complete = sorted(final_complete, key=len, reverse = True)[:count_of_ecg]
   
-  img_isl = draw_islands(final_complete, img_isl)
+  img_isl = draw_islands_final(final_complete, img_isl)
 
   cv2.imwrite(PATH_TO_OUTPUT_ + "_FinalCut.png",img_isl)
 

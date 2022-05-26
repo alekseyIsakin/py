@@ -537,7 +537,7 @@ if __name__ == "__main__":
     
   final_complete = sorted(final_complete, key=len, reverse = True)[:count_of_ecg]
   
-  img_isl = draw_islands_final(final_complete, img_isl)
+  img_isl = draw_islands_final(final_complete, img_clr, override=False)
 
   cv2.imwrite(PATH_TO_OUTPUT_ + "_FinalCut.png",img_isl)
 

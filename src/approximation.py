@@ -7,18 +7,24 @@ def getLine(x, y): #Возвращает предполагаемую ось, п
     
     ###########--functions--###########
 
-    def slide(x,step):
-        for ind in range(0, len(x)):
-            sum = 0
-            max_arr_ind = ind
-            if (ind + step > len(x)):
-                break
-            for i in range(0, step):
-                if (ind + i < len(x)):
-                    sum += x[ind+i]
-                    if (x[ind + i] > x[max_arr_ind]):
-                         max_arr_ind = x[ind + i]
-            x[max_arr_ind] = m.ceil(sum / step)
+    def slide(x,step, parametr):
+        for ind_ in range(0, parametr):
+            step1 = step
+            for ind in range(0, len(x)):
+                sum = 0
+                max_arr_ind = ind
+                min_arr_ind = ind
+                if (ind + step1 > len(x)):
+                    step1 = len(x) - ind
+                for i in range(0, step1):
+                    if (ind + i < len(x)):
+                        sum += x[ind + i]
+                        if (x[ind + i] > x[max_arr_ind]):
+                            max_arr_ind = x[ind + i]
+                        if (x[ind + i] < x[min_arr_ind]):
+                            min_arr_ind = x[ind + i]
+                x[max_arr_ind] = m.floor(sum / step1)
+                x[min_arr_ind] = m.ceil(sum / step1)
         return x
 
     def get_min(arr): #Минимальное значение в массиве
@@ -84,7 +90,7 @@ def getLine(x, y): #Возвращает предполагаемую ось, п
     
 
     x_linear = x.copy()
-    y_linear = slide(y.copy(), 10) #Сглаживает график по оси OY
+    y_linear = slide(y.copy(), 10, 100) #Сглаживает график по оси OY
     
     koeff = perform_exp_interp() #Строит экспоненциальное уравнение
 

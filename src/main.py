@@ -1,15 +1,3 @@
-from audioop import reverse
-import cProfile
-from os import access
-
-from pprint import pprint as pp
-import string
-from symbol import lambdef_nocond
-from turtle import down, left, right
-from pandas import crosstab
-
-from pyparsing import line
-from classes import Line
 from logger import lg
 from logger import lg, initLogger
 
@@ -17,8 +5,9 @@ import numpy as np
 import cv2
 # from analisis.loader.img_analizer import 
 from analisis.loader.mask_loader import get_mask_from_gray
-from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate, get_lines
-from analisis.classes.classes import Island, Fragment_info
+from analisis.loader.islands import build_islands_from_fragmets, fragment_calculate
+from analisis.classes.classes import Island, Fragment_info, Line
+
 from constant.paths import PATH_TO_INPUT_, PATH_TO_OUTPUT_
 from constant.other import _get_dir_dictionary, _get_fragment_dir_tuple, _get_line_dtype
 from drawing.draw import draw_islands_final, draw_islands
@@ -243,8 +232,8 @@ def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, st
 
 if __name__ == "__main__":
   
-  #fileName = "test2.png"
-  fileName = "test3.png"
+  fileName = "test2.png"
+  # fileName = "test3.png"
   #fileName = "test6.png"
   
   img:np.ndarray     = cv2.imread(PATH_TO_INPUT_ + fileName, cv2.IMREAD_GRAYSCALE)

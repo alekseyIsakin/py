@@ -61,7 +61,7 @@ def draw_islands_final(islands:list[Island], mask_inv:np.ndarray, backclr:int=(0
         ) * backclr
     if override == False:
         test_img = mask_inv
-    intdex = 0
+    
     for island in islands:
         clr = (
             rnd.randint(0, 255),

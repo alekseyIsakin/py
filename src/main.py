@@ -232,6 +232,7 @@ def previous_column_fragments(islands:list[Island], x:int, y:int, step_x:int, st
 
 if __name__ == "__main__":
   
+  # fileName = "nameless.png"
   fileName = "test2.png"
   # fileName = "test3.png"
   #fileName = "test6.png"
@@ -448,7 +449,7 @@ if __name__ == "__main__":
 
           ecg_cells[y][x].saturation = up_value - step*5
 
-          fragmentsWithIslands[x].append(islandsInFragment.copy())
+          fragmentsWithIslands[x][y].extend(islandsInFragment.copy())
 
           #------------------------------------------------------
           img_isl[y*step_y:(y+1)*step_y, x*step_x:(x+1)*step_x] = 255
@@ -460,7 +461,7 @@ if __name__ == "__main__":
           break
         else:
           continue
-
+    fragmentsWithIslands[x][y].sort(key=lambda x: x.left)
 
   cv2.imwrite(PATH_TO_OUTPUT_ + "_islands1.png", img_isl)
 
